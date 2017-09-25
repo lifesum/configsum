@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -10,12 +11,20 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/lifesum/configsum/pkg/config"
+)
+
+// Versions.
+const (
+	apiVersion = "v1"
 )
 
 // Log fields.
 const (
 	logCaller    = "caller"
 	logDuration  = "duration"
+	logError     = "err"
 	logHostname  = "hostname"
 	logJob       = "job"
 	logLifecycle = "lifecycle"
@@ -32,6 +41,12 @@ const (
 	lifecycleStart = "start"
 )
 
+// Timeouts.
+const (
+	defaultTimeoutRead  = 1 * time.Second
+	defaultTimeoutWrite = 1 * time.Second
+)
+
 // Buildtime vars.
 var revision = "0000000-dev"
 
@@ -39,9 +54,9 @@ func main() {
 	var (
 		begin = time.Now()
 
-		debug               = flag.Bool("debug", false, "enable debug logging")
-		instrumentationAddr = flag.String("instrumentation.addir", ":8701", "Listen address for instrumentation")
-		listenAddr          = flag.String("listen.addr", ":8700", "Listen address for HTTP API")
+		debug         = flag.Bool("debug", false, "enable debug logging")
+		intrumentAddr = flag.String("instrument.addir", ":8701", "Listen address for instrumentation")
+		listenAddr    = flag.String("listen.addr", ":8700", "Listen address for HTTP API")
 	)
 	flag.Parse()
 
@@ -81,17 +96,33 @@ func main() {
 			logDuration, time.Since(begin).Nanoseconds(),
 			logLifecycle, lifecycleStart,
 			logListen, addr,
-			logService, "instrumentation",
+			logService, "instrument",
 		)
 
 		abort(logger, http.ListenAndServe(addr, mux))
-	}(logger, *instrumentationAddr)
+	}(logger, *intrumentAddr)
 
+	// Setup serviceinstrument
+	var (
+		mux          = http.NewServeMux()
+		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
+		svc          = config.NewServiceUser()
+	)
+
+	mux.Handle(
+		fmt.Sprintf(`%s/`, prefixConfig),
+		http.StripPrefix(
+			prefixConfig,
+			config.MakeHandler(logger, svc),
+		),
+	)
+
+	// Setup server.
 	srv := &http.Server{
 		Addr:         *listenAddr,
-		Handler:      http.NewServeMux(),
-		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 1 * time.Second,
+		Handler:      mux,
+		ReadTimeout:  defaultTimeoutRead,
+		WriteTimeout: defaultTimeoutWrite,
 	}
 
 	_ = level.Info(logger).Log(
@@ -109,7 +140,7 @@ func abort(logger log.Logger, err error) {
 		return
 	}
 
-	_ = logger.Log("err", err, logLifecycle, lifecycleAbort)
+	_ = logger.Log(logError, err, logLifecycle, lifecycleAbort)
 	os.Exit(1)
 }
 
