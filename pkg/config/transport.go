@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/go-kit/kit/log"
@@ -26,5 +27,9 @@ func MakeHandler(logger log.Logger, svc ServiceUser) http.Handler {
 }
 
 func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	return userRequest{}, nil
+	c, ok := mux.Vars(r)["baseConfig"]
+	if !ok {
+		return nil, fmt.Errorf("Baseconfig missing")
+	}
+	return userRequest{baseConfig: c}, nil
 }

@@ -6,11 +6,12 @@ import (
 
 // ServiceUser provides user specific configs.
 type ServiceUser interface {
-	Get() (config, error)
+	Get(baseConfig string) (config, error)
 }
 
 type config struct {
-	createdAt time.Time
+	baseConfig string
+	createdAt  time.Time
 }
 
 type serviceUser struct{}
@@ -20,6 +21,14 @@ func NewServiceUser() ServiceUser {
 	return &serviceUser{}
 }
 
-func (s *serviceUser) Get() (config, error) {
-	return config{createdAt: time.Now()}, nil
+func (s *serviceUser) Get(baseConfig string) (config, error) {
+	// lookup base config
+	// lookup current config
+	// apply rules to base config
+	// compare configs
+	// return is newer
+	return config{
+		baseConfig: baseConfig,
+		createdAt:  time.Now(),
+	}, nil
 }

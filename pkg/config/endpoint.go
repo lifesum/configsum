@@ -8,10 +8,13 @@ import (
 	"github.com/go-kit/kit/endpoint"
 )
 
-type userRequest struct{}
+type userRequest struct {
+	baseConfig string
+}
 
 type userResponse struct {
-	CreatedAt time.Time `json:"createdAt"`
+	BaseConfig string    `json:"baseConfig"`
+	CreatedAt  time.Time `json:"createdAt"`
 }
 
 func (r userResponse) StatusCode() int {
@@ -20,11 +23,16 @@ func (r userResponse) StatusCode() int {
 
 func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		c, err := svc.Get()
+		req := request.(userRequest)
+
+		c, err := svc.Get(req.baseConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		return userResponse{CreatedAt: c.createdAt}, nil
+		return userResponse{
+			BaseConfig: c.baseConfig,
+			CreatedAt:  c.createdAt,
+		}, nil
 	}
 }
