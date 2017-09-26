@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"os/user"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/lifesum/configsum/pkg/config"
@@ -47,8 +49,13 @@ const (
 	defaultTimeoutWrite = 1 * time.Second
 )
 
+const fmtPostgresURI = "postgres://%s@127.0.0.1:5432/configsum_dev?connect_timeout=5s&sslmode=disable"
+
 // Buildtime vars.
 var revision = "0000000-dev"
+
+// Default vars.
+var defaultPostgresURI string
 
 func main() {
 	var (
@@ -57,6 +64,7 @@ func main() {
 		debug         = flag.Bool("debug", false, "enable debug logging")
 		intrumentAddr = flag.String("instrument.addir", ":8701", "Listen address for instrumentation")
 		listenAddr    = flag.String("listen.addr", ":8700", "Listen address for HTTP API")
+		postgresURI   = flag.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
 	)
 	flag.Parse()
 
@@ -102,11 +110,26 @@ func main() {
 		abort(logger, http.ListenAndServe(addr, mux))
 	}(logger, *intrumentAddr)
 
+	db, err := sqlx.Connect("postgres", *postgresURI)
+	if err != nil {
+		abort(logger, err)
+	}
+
+	baseRepo, err := config.NewInmemBaseRepo()
+	if err != nil {
+		abort(logger, err)
+	}
+
+	userRepo, err := config.NewPostgresUserRepo(db)
+	if err != nil {
+		abort(logger, err)
+	}
+
 	// Setup serviceinstrument
 	var (
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
-		svc          = config.NewServiceUser()
+		svc          = config.NewServiceUser(baseRepo, userRepo)
 	)
 
 	mux.Handle(
@@ -159,4 +182,13 @@ func registerProfile(mux *http.ServeMux) {
 	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	mux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+}
+
+func init() {
+	user, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	defaultPostgresURI = fmt.Sprintf(fmtPostgresURI, user.Username)
 }

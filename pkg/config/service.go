@@ -1,34 +1,34 @@
 package config
 
-import (
-	"time"
-)
-
 // ServiceUser provides user specific configs.
 type ServiceUser interface {
-	Get(baseConfig string) (config, error)
+	Get(baseConfig, userID string) (*UserConfig, error)
 }
 
-type config struct {
-	baseConfig string
-	createdAt  time.Time
+type serviceUser struct {
+	baseRepo BaseRepo
+	userRepo UserRepo
 }
-
-type serviceUser struct{}
 
 // NewServiceUser provides user specific configs.
-func NewServiceUser() ServiceUser {
-	return &serviceUser{}
+func NewServiceUser(baseRepo BaseRepo, userRepo UserRepo) ServiceUser {
+	return &serviceUser{
+		baseRepo: baseRepo,
+		userRepo: userRepo,
+	}
 }
 
-func (s *serviceUser) Get(baseConfig string) (config, error) {
+func (s *serviceUser) Get(baseConfig, userID string) (*UserConfig, error) {
 	// lookup base config
-	// lookup current config
-	// apply rules to base config
+	bc, err := s.baseRepo.Get(baseConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// lookup current config by userID
+	return s.userRepo.Get(bc.name, userID)
+
 	// compare configs
-	// return is newer
-	return config{
-		baseConfig: baseConfig,
-		createdAt:  time.Now(),
-	}, nil
+	// store config
+	// return rendered config
 }

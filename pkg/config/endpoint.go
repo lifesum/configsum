@@ -25,7 +25,7 @@ func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(userRequest)
 
-		c, err := svc.Get(req.baseConfig)
+		c, err := svc.Get(req.baseConfig, "id123")
 		if err != nil {
 			return nil, err
 		}
