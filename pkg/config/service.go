@@ -1,10 +1,16 @@
 package config
 
-import "fmt"
+import (
+	"time"
+)
 
 // ServiceUser provides user specific configs.
 type ServiceUser interface {
-	Get() error
+	Get() (config, error)
+}
+
+type config struct {
+	createdAt time.Time
 }
 
 type serviceUser struct{}
@@ -14,6 +20,6 @@ func NewServiceUser() ServiceUser {
 	return &serviceUser{}
 }
 
-func (s *serviceUser) Get() error {
-	return fmt.Errorf("serviceUser.Get() not implemented")
+func (s *serviceUser) Get() (config, error) {
+	return config{createdAt: time.Now()}, nil
 }
