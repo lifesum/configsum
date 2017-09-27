@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/lifesum/configsum/pkg/config"
+	"github.com/lifesum/configsum/pkg/pg"
 )
 
 // Versions.
@@ -48,8 +49,6 @@ const (
 	defaultTimeoutRead  = 1 * time.Second
 	defaultTimeoutWrite = 1 * time.Second
 )
-
-const fmtPostgresURI = "postgres://%s@127.0.0.1:5432/configsum_dev?connect_timeout=5s&sslmode=disable"
 
 // Buildtime vars.
 var revision = "0000000-dev"
@@ -190,5 +189,5 @@ func init() {
 		panic(err)
 	}
 
-	defaultPostgresURI = fmt.Sprintf(fmtPostgresURI, user.Username)
+	defaultPostgresURI = fmt.Sprintf(pg.DefaultDevURI, user.Username)
 }
