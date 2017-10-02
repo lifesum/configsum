@@ -22,10 +22,18 @@ func NewInmemUserRepo() (UserRepo, error) {
 	return &inmemUserRepo{}, nil
 }
 
-func (r *inmemUserRepo) Get(baseName, id string) (*UserConfig, error) {
-	return &UserConfig{
-		baseConfig: baseName,
-		userID:     id,
-		createdAt:  time.Now(),
+func (r *inmemUserRepo) Get(baseID, id string) (UserConfig, error) {
+	return UserConfig{
+		baseID:    baseID,
+		userID:    id,
+		createdAt: time.Now(),
 	}, nil
+}
+
+func (r *inmemUserRepo) Setup() error {
+	return nil
+}
+
+func (r *inmemUserRepo) Teardown() error {
+	return nil
 }

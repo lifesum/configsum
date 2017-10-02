@@ -31,7 +31,7 @@ func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 		}
 
 		return userResponse{
-			BaseConfig: c.baseConfig,
+			BaseConfig: c.baseID,
 			CreatedAt:  c.createdAt,
 		}, nil
 	}
