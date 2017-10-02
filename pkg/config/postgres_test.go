@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"math/rand"
 	"os/user"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/oklog/ulid"
 	"github.com/pkg/errors"
 	// Blank import for Postgres capabilities.
 	_ "github.com/lib/pq"
@@ -23,33 +25,64 @@ const (
 	numCharacterSet = "0123456789"
 )
 
-var pgURI string
+var (
+	seed = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	pgURI string
+)
 
 func TestPostgresUserRepoGet(t *testing.T) {
 	var (
-		baseConfig = randString(characterSet)
-		userID     = randString(numCharacterSet)
-		repo       = preparePGUserRepo(t)
+		baseID = randString(characterSet)
+		userID = randString(numCharacterSet)
+		render = rendered{
+			randString(numCharacterSet): rand.Intn(128),
+		}
+		repo = preparePGUserRepo(t)
 	)
 
-	_, err := repo.Get(baseConfig, userID)
-	if err == nil {
+	_, err := repo.Get(baseID, userID)
+	if errors.Cause(err) != ErrNotFound {
 		t.Fatalf("expected ErrNotFound")
 	}
 
-	if errors.Cause(err) != ErrNotFound {
-		t.Fatalf("expected ErrNotFound")
+	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Put(id.String(), baseID, userID, render)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := repo.Get(baseID, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := c.baseID, baseID; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := c.id, id.String(); have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := c.userID, userID; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := c.rendered, render; reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
 
 func randString(charset string) string {
-	var (
-		s = rand.New(rand.NewSource(time.Now().UnixNano()))
-		b = make([]byte, len(charset))
-	)
+	b := make([]byte, len(charset))
 
 	for i := range b {
-		b[i] = charset[s.Intn(len(charset))]
+		b[i] = charset[seed.Intn(len(charset))]
 	}
 
 	return string(b)

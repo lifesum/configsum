@@ -1,6 +1,9 @@
 package config
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type inmemBaseRepo struct{}
 
@@ -28,6 +31,13 @@ func (r *inmemUserRepo) Get(baseID, id string) (UserConfig, error) {
 		userID:    id,
 		createdAt: time.Now(),
 	}, nil
+}
+
+func (r *inmemUserRepo) Put(
+	id, baseID, userID string,
+	render rendered,
+) (UserConfig, error) {
+	return UserConfig{}, fmt.Errorf("inmemUserRepo.Put() not implemented")
 }
 
 func (r *inmemUserRepo) Setup() error {

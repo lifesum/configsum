@@ -12,18 +12,21 @@ type BaseConfig struct {
 	name string
 }
 
+type rendered map[string]interface{}
+
 // UserRepo provides access to user configs.
 type UserRepo interface {
 	lifecycle
 
-	Get(baseName, id string) (UserConfig, error)
+	Get(baseID, userID string) (UserConfig, error)
+	Put(id, baseID, userID string, render rendered) (UserConfig, error)
 }
 
 // UserConfig is a users rendered config.
 type UserConfig struct {
 	baseID      string
 	id          string
-	rendered    map[string]interface{}
+	rendered    rendered
 	ruleIDs     []string
 	userID      string
 	createdAt   time.Time

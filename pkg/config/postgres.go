@@ -2,6 +2,7 @@ package config
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -18,16 +19,22 @@ const (
 			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			base_id TEXT NOT NULL,
-			rule_ids TEXT[],
 			rendered JSONB NOT NULL,
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc'),
 			activated_at TIMESTAMP WITHOUT TIME ZONE
 		)`
 	pgDropTable = `DROP TABLE IF EXISTS config.users CASCADE`
 
+	pgInsertUser = `
+		INSERT INTO
+			config.users(base_id, id, rendered, user_id) VALUES(
+			:base_id,
+			:id,
+			:rendered,
+			:user_id)`
 	pgSelectUsers = `
 		SELECT
-			id, user_id, base_id, rule_ids, rendered, created_at, activated_at
+			id, user_id, base_id, rendered, created_at
 		FROM
 			config.users
 		LIMIT
@@ -45,7 +52,7 @@ func NewPostgresUserRepo(db *sqlx.DB) (UserRepo, error) {
 	}, nil
 }
 
-func (r *pgUserRepo) Get(baseName, id string) (UserConfig, error) {
+func (r *pgUserRepo) Get(baseID, userID string) (UserConfig, error) {
 	query, args, err := r.db.BindNamed(pgSelectUsers, map[string]interface{}{
 		"limit": 1,
 	})
@@ -54,13 +61,11 @@ func (r *pgUserRepo) Get(baseName, id string) (UserConfig, error) {
 	}
 
 	raw := struct {
-		BaseID      string                 `db:"base_id"`
-		ID          string                 `db:"id"`
-		Rendered    map[string]interface{} `db:"rendered"`
-		RuleIDs     []string               `db:"rule_ids"`
-		UserID      string                 `db:"user_id"`
-		CreatedAt   time.Time              `db:"created_at"`
-		ActivatedAt time.Time              `db:"activated_at"`
+		BaseID    string    `db:"base_id"`
+		ID        string    `db:"id"`
+		Rendered  []byte    `db:"rendered"`
+		UserID    string    `db:"user_id"`
+		CreatedAt time.Time `db:"created_at"`
 	}{}
 
 	err = r.db.Get(&raw, query, args...)
@@ -70,7 +75,7 @@ func (r *pgUserRepo) Get(baseName, id string) (UserConfig, error) {
 				return UserConfig{}, err
 			}
 
-			return r.Get(baseName, id)
+			return r.Get(baseID, userID)
 		}
 
 		if err == sql.ErrNoRows {
@@ -80,9 +85,48 @@ func (r *pgUserRepo) Get(baseName, id string) (UserConfig, error) {
 		return UserConfig{}, fmt.Errorf("get: %s", err)
 	}
 
+	render := rendered{}
+
+	fmt.Println(string(raw.Rendered))
+	err = json.Unmarshal(raw.Rendered, &render)
+	if err != nil {
+		return UserConfig{}, fmt.Errorf("rendered unmarshal: %s", err)
+	}
+
 	return UserConfig{
-		baseID: raw.BaseID,
-		id:     raw.ID,
+		baseID:    raw.BaseID,
+		id:        raw.ID,
+		rendered:  render,
+		userID:    raw.UserID,
+		createdAt: raw.CreatedAt,
+	}, nil
+}
+
+func (r *pgUserRepo) Put(
+	id, baseID, userID string,
+	render rendered,
+) (UserConfig, error) {
+	raw, err := json.Marshal(render)
+	if err != nil {
+		return UserConfig{}, fmt.Errorf("marashl rendered: %s", err)
+	}
+
+	_, err = r.db.NamedExec(pgInsertUser, map[string]interface{}{
+		"base_id":  baseID,
+		"id":       id,
+		"rendered": raw,
+		"user_id":  userID,
+	})
+	if err != nil {
+		return UserConfig{}, fmt.Errorf("named exec: %s", err)
+	}
+
+	return UserConfig{
+		baseID:    baseID,
+		id:        id,
+		userID:    userID,
+		rendered:  render,
+		createdAt: time.Now(),
 	}, nil
 }
 
