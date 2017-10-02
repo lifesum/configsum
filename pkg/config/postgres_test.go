@@ -5,8 +5,10 @@ package config
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os/user"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	// Blank import for Postgres capabilities.
@@ -15,12 +17,29 @@ import (
 	"github.com/lifesum/configsum/pkg/pg"
 )
 
+const (
+	characterSet = "abcdefghijklmnopqrstuvwxyz" +
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	numCharacterSet = "0123456789"
+)
+
 var pgURI string
+var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func randString(charset string) string {
+	b := make([]byte, len(charset))
+
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+
+	return string(b)
+}
 
 func TestPostgresUserRepoGet(t *testing.T) {
 	repo := preparePGUserRepo(t)
 
-	_, err := repo.Get("testName", "testID1234")
+	_, err := repo.Get(randString(characterSet), randString(numCharacterSet))
 	if err != nil {
 		t.Fatal(err)
 	}
