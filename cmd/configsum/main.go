@@ -11,7 +11,9 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	"github.com/jmoiron/sqlx"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/lifesum/configsum/pkg/config"
@@ -38,6 +40,19 @@ const (
 	logTask      = "task"
 )
 
+// Instrument labels.
+const (
+	labelOp    = "op"
+	labelRepo  = "repo"
+	labelStore = "store"
+)
+
+// Instrument fields.
+const (
+	instrumentNamespace = "configsum"
+	instrumentSubsystem = "config_api"
+)
+
 // Lifecycles.
 const (
 	lifecycleAbort = "abort"
@@ -49,6 +64,8 @@ const (
 	defaultTimeoutRead  = 1 * time.Second
 	defaultTimeoutWrite = 1 * time.Second
 )
+
+const storeRepo = "postgres"
 
 // Buildtime vars.
 var revision = "0000000-dev"
@@ -109,11 +126,73 @@ func main() {
 		abort(logger, http.ListenAndServe(addr, mux))
 	}(logger, *intrumentAddr)
 
-	db, err := sqlx.Connect("postgres", *postgresURI)
+	repoLabels := []string{
+		labelOp,
+		labelRepo,
+		labelStore,
+	}
+
+	repoErrCount := kitprom.NewCounterFrom(
+		prometheus.CounterOpts{
+			Namespace: instrumentNamespace,
+			Subsystem: instrumentSubsystem,
+			Name:      "err_count",
+			Help:      "Amount of failed repo operations.",
+		},
+		repoLabels,
+	)
+
+	repoErrCountFunc := func(store, repo, op string) {
+		repoErrCount.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Add(1)
+	}
+
+	repoOpCount := kitprom.NewCounterFrom(
+		prometheus.CounterOpts{
+			Namespace: instrumentNamespace,
+			Subsystem: instrumentSubsystem,
+			Name:      "op_count",
+			Help:      "Amount of successful repo operations.",
+		},
+		repoLabels,
+	)
+
+	repoOpCountFunc := func(store, repo, op string) {
+		repoOpCount.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Add(1)
+	}
+
+	repoOpLatency := kitprom.NewHistogramFrom(
+		prometheus.HistogramOpts{
+			Namespace: instrumentNamespace,
+			Subsystem: instrumentSubsystem,
+			Name:      "op_latency_seconds",
+			Help:      "Latency of successful repo operations.",
+		},
+		repoLabels,
+	)
+
+	repoOpLatencyFunc := func(store, repo, op string, begin time.Time) {
+		repoOpLatency.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Observe(time.Since(begin).Seconds())
+	}
+
+	// Setup clients.
+	db, err := sqlx.Connect(storeRepo, *postgresURI)
 	if err != nil {
 		abort(logger, err)
 	}
 
+	// Setup repos.
 	baseRepo, err := config.NewInmemBaseRepo()
 	if err != nil {
 		abort(logger, err)
@@ -123,9 +202,15 @@ func main() {
 	if err != nil {
 		abort(logger, err)
 	}
-	userRepo = config.NewUserRepoLogMiddleware(logger, "postgres")(userRepo)
+	userRepo = config.NewUserRepoInstrumentMiddleware(
+		repoErrCountFunc,
+		repoOpCountFunc,
+		repoOpLatencyFunc,
+		storeRepo,
+	)(userRepo)
+	userRepo = config.NewUserRepoLogMiddleware(logger, storeRepo)(userRepo)
 
-	// Setup serviceinstrument
+	// Setup service.
 	var (
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
