@@ -36,9 +36,14 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		baseID = randString(characterSet)
 		userID = randString(numCharacterSet)
 		render = rendered{
-			randString(numCharacterSet): rand.Intn(128),
+			randString(numCharacterSet): seed.Float64(),
 		}
-		repo = preparePGUserRepo(t)
+		repo    = preparePGUserRepo(t)
+		ruleIDs = []string{
+			randString(numCharacterSet),
+			randString(numCharacterSet),
+			randString(numCharacterSet),
+		}
 	)
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
@@ -50,18 +55,25 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		randString(characterSet),
 		randString(characterSet),
 		randString(numCharacterSet),
+		ruleIDs,
 		render,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(randString(characterSet), baseID, userID, map[string]interface{}{})
+	_, err = repo.Append(
+		randString(characterSet),
+		baseID,
+		userID,
+		[]string{},
+		map[string]interface{}{},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, render)
+	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +95,11 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := c.rendered, render; reflect.DeepEqual(have, want) {
+	if have, want := c.rendered, render; !reflect.DeepEqual(c.rendered, render) {
+		t.Errorf("\nhave %#v,\nwant %#v", have, want)
+	}
+
+	if have, want := c.ruleIDs, ruleIDs; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -108,7 +124,12 @@ func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 		render = rendered{
 			randString(numCharacterSet): rand.Intn(128),
 		}
-		repo = preparePGUserRepo(t)
+		repo    = preparePGUserRepo(t)
+		ruleIDs = []string{
+			randString(numCharacterSet),
+			randString(numCharacterSet),
+			randString(numCharacterSet),
+		}
 	)
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
@@ -116,12 +137,12 @@ func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, render)
+	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, render)
+	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
 	if have, want := errors.Cause(err), ErrExists; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 
 	"github.com/lifesum/configsum/pkg/pg"
@@ -20,23 +21,24 @@ const (
 			user_id TEXT NOT NULL,
 			base_id TEXT NOT NULL,
 			rendered JSONB NOT NULL,
-			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc'),
-			activated_at TIMESTAMP WITHOUT TIME ZONE
+			rule_ids TEXT[],
+			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc')
 		)`
 	pgUserDropTable = `DROP TABLE IF EXISTS config.users CASCADE`
 
 	pgUserInsert = `
 		/* pgUserInsert*/
 		INSERT INTO
-			config.users(base_id, id, rendered, user_id) VALUES(
-			:base_id,
+			config.users(base_id, id, rendered, rule_ids, user_id) VALUES(
+			:baseId,
 			:id,
 			:rendered,
-			:user_id)`
+			:ruleIds,
+			:userId)`
 	pgUserGetLatest = `
 		/* pgUserGetLatest */
 		SELECT
-			id, user_id, base_id, rendered, created_at
+			id, user_id, base_id, rendered, rule_ids, created_at
 		FROM
 			config.users
 		WHERE
@@ -61,6 +63,7 @@ func NewPostgresUserRepo(db *sqlx.DB) (UserRepo, error) {
 
 func (r *pgUserRepo) Append(
 	id, baseID, userID string,
+	ruleIDs []string,
 	render rendered,
 ) (UserConfig, error) {
 	raw, err := json.Marshal(render)
@@ -69,10 +72,11 @@ func (r *pgUserRepo) Append(
 	}
 
 	_, err = r.db.NamedExec(pgUserInsert, map[string]interface{}{
-		"base_id":  baseID,
+		"baseId":   baseID,
 		"id":       id,
 		"rendered": raw,
-		"user_id":  userID,
+		"ruleIds":  pq.StringArray(ruleIDs),
+		"userId":   userID,
 	})
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
@@ -83,7 +87,7 @@ func (r *pgUserRepo) Append(
 				return UserConfig{}, err
 			}
 
-			return r.Append(id, baseID, userID, render)
+			return r.Append(id, baseID, userID, ruleIDs, render)
 		default:
 			return UserConfig{}, fmt.Errorf("named exec: %s", err)
 		}
@@ -108,11 +112,12 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 	}
 
 	raw := struct {
-		BaseID    string    `db:"base_id"`
-		ID        string    `db:"id"`
-		Rendered  []byte    `db:"rendered"`
-		UserID    string    `db:"user_id"`
-		CreatedAt time.Time `db:"created_at"`
+		BaseID    string         `db:"base_id"`
+		ID        string         `db:"id"`
+		Rendered  []byte         `db:"rendered"`
+		RuleIDs   pq.StringArray `db:"rule_ids"`
+		UserID    string         `db:"user_id"`
+		CreatedAt time.Time      `db:"created_at"`
 	}{}
 
 	err = r.db.Get(&raw, query, args...)
@@ -134,8 +139,7 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 
 	render := rendered{}
 
-	err = json.Unmarshal(raw.Rendered, &render)
-	if err != nil {
+	if err := json.Unmarshal(raw.Rendered, &render); err != nil {
 		return UserConfig{}, fmt.Errorf("rendered unmarshal: %s", err)
 	}
 
@@ -143,6 +147,7 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 		baseID:    raw.BaseID,
 		id:        raw.ID,
 		rendered:  render,
+		ruleIDs:   []string(raw.RuleIDs),
 		userID:    raw.UserID,
 		createdAt: raw.CreatedAt,
 	}, nil
