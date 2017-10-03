@@ -25,7 +25,7 @@ func NewInmemUserRepo() (UserRepo, error) {
 	return &inmemUserRepo{}, nil
 }
 
-func (r *inmemUserRepo) Get(baseID, id string) (UserConfig, error) {
+func (r *inmemUserRepo) GetLatest(baseID, id string) (UserConfig, error) {
 	return UserConfig{
 		baseID:    baseID,
 		userID:    id,

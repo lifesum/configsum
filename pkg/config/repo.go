@@ -18,7 +18,7 @@ type rendered map[string]interface{}
 type UserRepo interface {
 	lifecycle
 
-	Get(baseID, userID string) (UserConfig, error)
+	GetLatest(baseID, userID string) (UserConfig, error)
 	Put(id, baseID, userID string, render rendered) (UserConfig, error)
 }
 

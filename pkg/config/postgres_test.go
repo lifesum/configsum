@@ -31,7 +31,7 @@ var (
 	pgURI string
 )
 
-func TestPostgresUserRepoGet(t *testing.T) {
+func TestPostgresUserRepoGetLatest(t *testing.T) {
 	var (
 		baseID = randString(characterSet)
 		userID = randString(numCharacterSet)
@@ -41,7 +41,7 @@ func TestPostgresUserRepoGet(t *testing.T) {
 		repo = preparePGUserRepo(t)
 	)
 
-	_, err := repo.Get(baseID, userID)
+	_, err := repo.GetLatest(baseID, userID)
 	if errors.Cause(err) != ErrNotFound {
 		t.Fatalf("expected ErrNotFound")
 	}
@@ -51,12 +51,27 @@ func TestPostgresUserRepoGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	_, err = repo.Put(
+		randString(characterSet),
+		randString(characterSet),
+		randString(numCharacterSet),
+		render,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Put(randString(characterSet), baseID, userID, map[string]interface{}{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	_, err = repo.Put(id.String(), baseID, userID, render)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	c, err := repo.Get(baseID, userID)
+	c, err := repo.GetLatest(baseID, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +91,14 @@ func TestPostgresUserRepoGet(t *testing.T) {
 	if have, want := c.rendered, render; reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
+}
+
+func TestPostgresUserRepoGetNotFound(t *testing.T) {
+	t.Fail()
+}
+
+func TestPostgresUserRepoPutDuplicate(t *testing.T) {
+	t.Fail()
 }
 
 func randString(charset string) string {

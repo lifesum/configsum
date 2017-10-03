@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	pgCreateSchema = `CREATE SCHEMA IF NOT EXISTS config`
-	pgCreateTable  = `
+	pgUserCreateSchema = `CREATE SCHEMA IF NOT EXISTS config`
+	pgUserCreateTable  = `
 		CREATE TABLE IF NOT EXISTS config.users(
 			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
@@ -23,22 +23,29 @@ const (
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc'),
 			activated_at TIMESTAMP WITHOUT TIME ZONE
 		)`
-	pgDropTable = `DROP TABLE IF EXISTS config.users CASCADE`
+	pgUserDropTable = `DROP TABLE IF EXISTS config.users CASCADE`
 
-	pgInsertUser = `
+	pgUserInsert = `
+		/* pgUserInsert*/
 		INSERT INTO
 			config.users(base_id, id, rendered, user_id) VALUES(
 			:base_id,
 			:id,
 			:rendered,
 			:user_id)`
-	pgSelectUsers = `
+	pgUserGetLatest = `
+		/* pgUserGetLatest */
 		SELECT
 			id, user_id, base_id, rendered, created_at
 		FROM
 			config.users
+		WHERE
+			base_id = :baseId
+			AND user_id = :userId
+		ORDER BY
+			created_at DESC
 		LIMIT
-			:limit`
+			1`
 )
 
 type pgUserRepo struct {
@@ -52,9 +59,10 @@ func NewPostgresUserRepo(db *sqlx.DB) (UserRepo, error) {
 	}, nil
 }
 
-func (r *pgUserRepo) Get(baseID, userID string) (UserConfig, error) {
-	query, args, err := r.db.BindNamed(pgSelectUsers, map[string]interface{}{
-		"limit": 1,
+func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
+	query, args, err := r.db.BindNamed(pgUserGetLatest, map[string]interface{}{
+		"baseId": baseID,
+		"userId": userID,
 	})
 	if err != nil {
 		return UserConfig{}, fmt.Errorf("named query: %s", err)
@@ -75,7 +83,7 @@ func (r *pgUserRepo) Get(baseID, userID string) (UserConfig, error) {
 				return UserConfig{}, err
 			}
 
-			return r.Get(baseID, userID)
+			return r.GetLatest(baseID, userID)
 		}
 
 		if err == sql.ErrNoRows {
@@ -87,7 +95,6 @@ func (r *pgUserRepo) Get(baseID, userID string) (UserConfig, error) {
 
 	render := rendered{}
 
-	fmt.Println(string(raw.Rendered))
 	err = json.Unmarshal(raw.Rendered, &render)
 	if err != nil {
 		return UserConfig{}, fmt.Errorf("rendered unmarshal: %s", err)
@@ -111,7 +118,7 @@ func (r *pgUserRepo) Put(
 		return UserConfig{}, fmt.Errorf("marashl rendered: %s", err)
 	}
 
-	_, err = r.db.NamedExec(pgInsertUser, map[string]interface{}{
+	_, err = r.db.NamedExec(pgUserInsert, map[string]interface{}{
 		"base_id":  baseID,
 		"id":       id,
 		"rendered": raw,
@@ -132,8 +139,8 @@ func (r *pgUserRepo) Put(
 
 func (r *pgUserRepo) Setup() error {
 	for _, q := range []string{
-		pgCreateSchema,
-		pgCreateTable,
+		pgUserCreateSchema,
+		pgUserCreateTable,
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
@@ -146,7 +153,7 @@ func (r *pgUserRepo) Setup() error {
 
 func (r *pgUserRepo) Teardown() error {
 	for _, q := range []string{
-		pgDropTable,
+		pgUserDropTable,
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
