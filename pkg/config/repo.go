@@ -14,6 +14,26 @@ type BaseConfig struct {
 
 type rendered map[string]interface{}
 
+func (r rendered) SetBool(key string, value bool) {
+	r[key] = value
+}
+
+func (r rendered) setNumber(key string, value float64) {
+	r[key] = value
+}
+
+func (r rendered) setNumberList(key string, value []float64) {
+	r[key] = value
+}
+
+func (r rendered) setString(key, value string) {
+	r[key] = value
+}
+
+func (r rendered) setStringList(key string, value []string) {
+	r[key] = value
+}
+
 // UserRepo provides access to user configs.
 type UserRepo interface {
 	lifecycle

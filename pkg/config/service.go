@@ -27,7 +27,6 @@ func (s *serviceUser) Get(baseConfig, userID string) (UserConfig, error) {
 
 	// lookup current config by userID
 	return s.userRepo.GetLatest(bc.name, userID)
-
 	// compare configs
 	// store config
 	// return rendered config

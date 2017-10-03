@@ -33,11 +33,9 @@ var (
 
 func TestPostgresUserRepoGetLatest(t *testing.T) {
 	var (
-		baseID = randString(characterSet)
-		userID = randString(numCharacterSet)
-		render = rendered{
-			randString(numCharacterSet): seed.Float64(),
-		}
+		baseID  = randString(characterSet)
+		userID  = randString(numCharacterSet)
+		render  = rendered{}
 		repo    = preparePGUserRepo(t)
 		ruleIDs = []string{
 			randString(numCharacterSet),
@@ -45,6 +43,8 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 			randString(numCharacterSet),
 		}
 	)
+
+	render.setNumber(randString(characterSet), seed.Float64())
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {
@@ -67,7 +67,7 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		baseID,
 		userID,
 		[]string{},
-		map[string]interface{}{},
+		rendered{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -119,11 +119,9 @@ func TestPostgresUserRepoGetLatestNotFound(t *testing.T) {
 
 func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 	var (
-		baseID = randString(characterSet)
-		userID = randString(numCharacterSet)
-		render = rendered{
-			randString(numCharacterSet): rand.Intn(128),
-		}
+		baseID  = randString(characterSet)
+		userID  = randString(numCharacterSet)
+		render  = rendered{}
 		repo    = preparePGUserRepo(t)
 		ruleIDs = []string{
 			randString(numCharacterSet),
@@ -131,6 +129,8 @@ func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 			randString(numCharacterSet),
 		}
 	)
+
+	render.SetBool(randString(numCharacterSet), false)
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {
