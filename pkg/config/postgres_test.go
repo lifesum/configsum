@@ -41,17 +41,12 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		repo = preparePGUserRepo(t)
 	)
 
-	_, err := repo.GetLatest(baseID, userID)
-	if errors.Cause(err) != ErrNotFound {
-		t.Fatalf("expected ErrNotFound")
-	}
-
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Put(
+	_, err = repo.Append(
 		randString(characterSet),
 		randString(characterSet),
 		randString(numCharacterSet),
@@ -61,12 +56,12 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Put(randString(characterSet), baseID, userID, map[string]interface{}{})
+	_, err = repo.Append(randString(characterSet), baseID, userID, map[string]interface{}{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Put(id.String(), baseID, userID, render)
+	_, err = repo.Append(id.String(), baseID, userID, render)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,12 +88,43 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 	}
 }
 
-func TestPostgresUserRepoGetNotFound(t *testing.T) {
-	t.Fail()
+func TestPostgresUserRepoGetLatestNotFound(t *testing.T) {
+	var (
+		baseID = randString(characterSet)
+		userID = randString(numCharacterSet)
+		repo   = preparePGUserRepo(t)
+	)
+
+	_, err := repo.GetLatest(baseID, userID)
+	if have, want := errors.Cause(err), ErrNotFound; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
 }
 
-func TestPostgresUserRepoPutDuplicate(t *testing.T) {
-	t.Fail()
+func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
+	var (
+		baseID = randString(characterSet)
+		userID = randString(numCharacterSet)
+		render = rendered{
+			randString(numCharacterSet): rand.Intn(128),
+		}
+		repo = preparePGUserRepo(t)
+	)
+
+	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Append(id.String(), baseID, userID, render)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Append(id.String(), baseID, userID, render)
+	if have, want := errors.Cause(err), ErrExists; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
 }
 
 func randString(charset string) string {

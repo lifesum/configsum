@@ -12,11 +12,13 @@ const (
 )
 
 const (
-	codeRelationshipNotFound = "42P01"
+	codeDuplicateKeyViolation = "23505"
+	codeRelationshipNotFound  = "42P01"
 )
 
 // Errors.
 var (
+	ErrDuplicateKey     = errors.New("duplicate key")
 	ErrRelationNotFound = errors.New("relation not found")
 )
 
@@ -29,6 +31,8 @@ func IsRelationNotFound(err error) bool {
 func Wrap(err error) error {
 	if e, ok := err.(*pq.Error); ok {
 		switch e.Code {
+		case codeDuplicateKeyViolation:
+			return ErrDuplicateKey
 		case codeRelationshipNotFound:
 			return ErrRelationNotFound
 		}

@@ -6,5 +6,6 @@ import (
 
 // Common errors.
 var (
+	ErrExists   = errors.New("entity exists")
 	ErrNotFound = errors.New("entity not found")
 )

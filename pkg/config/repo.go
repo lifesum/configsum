@@ -18,8 +18,8 @@ type rendered map[string]interface{}
 type UserRepo interface {
 	lifecycle
 
+	Append(id, baseID, userID string, render rendered) (UserConfig, error)
 	GetLatest(baseID, userID string) (UserConfig, error)
-	Put(id, baseID, userID string, render rendered) (UserConfig, error)
 }
 
 // UserConfig is a users rendered config.

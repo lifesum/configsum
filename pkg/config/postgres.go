@@ -59,6 +59,45 @@ func NewPostgresUserRepo(db *sqlx.DB) (UserRepo, error) {
 	}, nil
 }
 
+func (r *pgUserRepo) Append(
+	id, baseID, userID string,
+	render rendered,
+) (UserConfig, error) {
+	raw, err := json.Marshal(render)
+	if err != nil {
+		return UserConfig{}, fmt.Errorf("marashl rendered: %s", err)
+	}
+
+	_, err = r.db.NamedExec(pgUserInsert, map[string]interface{}{
+		"base_id":  baseID,
+		"id":       id,
+		"rendered": raw,
+		"user_id":  userID,
+	})
+	if err != nil {
+		switch errors.Cause(pg.Wrap(err)) {
+		case pg.ErrDuplicateKey:
+			return UserConfig{}, errors.Wrap(ErrExists, "user config")
+		case pg.ErrRelationNotFound:
+			if err := r.Setup(); err != nil {
+				return UserConfig{}, err
+			}
+
+			return r.Append(id, baseID, userID, render)
+		default:
+			return UserConfig{}, fmt.Errorf("named exec: %s", err)
+		}
+	}
+
+	return UserConfig{
+		baseID:    baseID,
+		id:        id,
+		userID:    userID,
+		rendered:  render,
+		createdAt: time.Now(),
+	}, nil
+}
+
 func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 	query, args, err := r.db.BindNamed(pgUserGetLatest, map[string]interface{}{
 		"baseId": baseID,
@@ -106,34 +145,6 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 		rendered:  render,
 		userID:    raw.UserID,
 		createdAt: raw.CreatedAt,
-	}, nil
-}
-
-func (r *pgUserRepo) Put(
-	id, baseID, userID string,
-	render rendered,
-) (UserConfig, error) {
-	raw, err := json.Marshal(render)
-	if err != nil {
-		return UserConfig{}, fmt.Errorf("marashl rendered: %s", err)
-	}
-
-	_, err = r.db.NamedExec(pgUserInsert, map[string]interface{}{
-		"base_id":  baseID,
-		"id":       id,
-		"rendered": raw,
-		"user_id":  userID,
-	})
-	if err != nil {
-		return UserConfig{}, fmt.Errorf("named exec: %s", err)
-	}
-
-	return UserConfig{
-		baseID:    baseID,
-		id:        id,
-		userID:    userID,
-		rendered:  render,
-		createdAt: time.Now(),
 	}, nil
 }
 

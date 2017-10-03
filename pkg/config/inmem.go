@@ -25,19 +25,19 @@ func NewInmemUserRepo() (UserRepo, error) {
 	return &inmemUserRepo{}, nil
 }
 
+func (r *inmemUserRepo) Append(
+	id, baseID, userID string,
+	render rendered,
+) (UserConfig, error) {
+	return UserConfig{}, fmt.Errorf("inmemUserRepo.Put() not implemented")
+}
+
 func (r *inmemUserRepo) GetLatest(baseID, id string) (UserConfig, error) {
 	return UserConfig{
 		baseID:    baseID,
 		userID:    id,
 		createdAt: time.Now(),
 	}, nil
-}
-
-func (r *inmemUserRepo) Put(
-	id, baseID, userID string,
-	render rendered,
-) (UserConfig, error) {
-	return UserConfig{}, fmt.Errorf("inmemUserRepo.Put() not implemented")
 }
 
 func (r *inmemUserRepo) Setup() error {
