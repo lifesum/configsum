@@ -46,6 +46,9 @@ type UserRepo interface {
 	GetLatest(baseID, userID string) (UserConfig, error)
 }
 
+// UserRepoMiddleware is chainable behaviour modifier for UserRepo.
+type UserRepoMiddleware func(UserRepo) UserRepo
+
 // UserConfig is a users rendered config.
 type UserConfig struct {
 	baseID    string

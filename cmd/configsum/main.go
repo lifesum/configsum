@@ -123,6 +123,7 @@ func main() {
 	if err != nil {
 		abort(logger, err)
 	}
+	userRepo = config.NewUserRepoLogMiddleware(logger, "postgres")(userRepo)
 
 	// Setup serviceinstrument
 	var (
