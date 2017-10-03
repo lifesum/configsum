@@ -122,19 +122,19 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 
 	err = r.db.Get(&raw, query, args...)
 	if err != nil {
-		if pg.IsRelationNotFound(pg.Wrap(err)) {
+		switch errors.Cause(pg.Wrap(err)) {
+		case pg.ErrRelationNotFound:
 			if err := r.Setup(); err != nil {
 				return UserConfig{}, err
 			}
 
 			return r.GetLatest(baseID, userID)
-		}
-
-		if err == sql.ErrNoRows {
+		case sql.ErrNoRows:
 			return UserConfig{}, errors.Wrap(ErrNotFound, "get user config")
-		}
 
-		return UserConfig{}, fmt.Errorf("get: %s", err)
+		default:
+			return UserConfig{}, fmt.Errorf("get: %s", err)
+		}
 	}
 
 	render := rendered{}
