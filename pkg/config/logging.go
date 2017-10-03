@@ -72,6 +72,7 @@ func (r *logUserRepo) GetLatest(baseID, userID string) (c UserConfig, err error)
 		ps := []interface{}{
 			logBaseID, baseID,
 			logDuration, time.Since(begin).Nanoseconds(),
+			logOp, "GetLatest",
 			logUserID, userID,
 		}
 
@@ -89,6 +90,7 @@ func (r *logUserRepo) Setup() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
+			logOp, "Setup",
 		}
 
 		if err != nil {
@@ -105,6 +107,7 @@ func (r *logUserRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
+			logOp, "Teardown",
 		}
 
 		if err != nil {
