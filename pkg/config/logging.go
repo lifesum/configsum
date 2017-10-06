@@ -8,17 +8,17 @@ import (
 
 // Log fields.
 const (
-	logBaseID   = "baseId"
-	logDuration = "duration"
-	logErr      = "err"
-	logID       = "id"
-	logOp       = "op"
-	logPkg      = "pkg"
-	logRendered = "rendered"
-	logRepo     = "repo"
-	logRuleIDs  = "ruleIds"
-	logStore    = "store"
-	logUserID   = "userId"
+	logBaseID        = "baseId"
+	logDuration      = "duration"
+	logErr           = "err"
+	logID            = "id"
+	logOp            = "op"
+	logPkg           = "pkg"
+	logRendered      = "rendered"
+	logRepo          = "repo"
+	logRuleDecisions = "ruleDecisions"
+	logStore         = "store"
+	logUserID        = "userId"
 )
 
 type logUserRepo struct {
@@ -43,7 +43,7 @@ func NewUserRepoLogMiddleware(logger log.Logger, store string) UserRepoMiddlewar
 
 func (r *logUserRepo) Append(
 	id, baseID, userID string,
-	ruleIDs []string,
+	decisions ruleDecisions,
 	render rendered,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
@@ -53,7 +53,7 @@ func (r *logUserRepo) Append(
 			logID, id,
 			logOp, "Append",
 			logRendered, render,
-			logRuleIDs, ruleIDs,
+			logRuleDecisions, decisions,
 			logUserID, userID,
 		}
 
@@ -64,7 +64,7 @@ func (r *logUserRepo) Append(
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.Append(id, baseID, userID, ruleIDs, render)
+	return r.next.Append(id, baseID, userID, decisions, render)
 }
 
 func (r *logUserRepo) GetLatest(baseID, userID string) (c UserConfig, err error) {

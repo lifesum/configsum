@@ -27,7 +27,7 @@ func NewInmemUserRepo() (UserRepo, error) {
 
 func (r *inmemUserRepo) Append(
 	id, baseID, userID string,
-	ruleIDs []string,
+	decisions ruleDecisions,
 	render rendered,
 ) (UserConfig, error) {
 	return UserConfig{}, fmt.Errorf("inmemUserRepo.Put() not implemented")

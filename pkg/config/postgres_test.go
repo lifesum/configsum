@@ -33,14 +33,14 @@ var (
 
 func TestPostgresUserRepoGetLatest(t *testing.T) {
 	var (
-		baseID  = randString(characterSet)
-		userID  = randString(numCharacterSet)
-		render  = rendered{}
-		repo    = preparePGUserRepo(t)
-		ruleIDs = []string{
-			randString(numCharacterSet),
-			randString(numCharacterSet),
-			randString(numCharacterSet),
+		baseID    = randString(characterSet)
+		userID    = randString(numCharacterSet)
+		render    = rendered{}
+		repo      = preparePGUserRepo(t)
+		decisions = ruleDecisions{
+			randString(numCharacterSet): []int{seed.Intn(100), seed.Intn(100)},
+			randString(numCharacterSet): []int{seed.Intn(100)},
+			randString(numCharacterSet): []int{},
 		}
 	)
 
@@ -55,7 +55,7 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		randString(characterSet),
 		randString(characterSet),
 		randString(numCharacterSet),
-		ruleIDs,
+		decisions,
 		render,
 	)
 	if err != nil {
@@ -66,14 +66,14 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		randString(characterSet),
 		baseID,
 		userID,
-		[]string{},
+		nil,
 		rendered{},
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
+	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestPostgresUserRepoGetLatest(t *testing.T) {
 		t.Errorf("\nhave %#v,\nwant %#v", have, want)
 	}
 
-	if have, want := c.ruleIDs, ruleIDs; !reflect.DeepEqual(have, want) {
+	if have, want := c.ruleDecisions, decisions; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -119,14 +119,14 @@ func TestPostgresUserRepoGetLatestNotFound(t *testing.T) {
 
 func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 	var (
-		baseID  = randString(characterSet)
-		userID  = randString(numCharacterSet)
-		render  = rendered{}
-		repo    = preparePGUserRepo(t)
-		ruleIDs = []string{
-			randString(numCharacterSet),
-			randString(numCharacterSet),
-			randString(numCharacterSet),
+		baseID    = randString(characterSet)
+		userID    = randString(numCharacterSet)
+		render    = rendered{}
+		repo      = preparePGUserRepo(t)
+		decisions = ruleDecisions{
+			randString(numCharacterSet): []int{seed.Int(), seed.Int()},
+			randString(numCharacterSet): []int{seed.Int()},
+			randString(numCharacterSet): []int{},
 		}
 	)
 
@@ -137,12 +137,12 @@ func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
+	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = repo.Append(id.String(), baseID, userID, ruleIDs, render)
+	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
 	if have, want := errors.Cause(err), ErrExists; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
