@@ -9,6 +9,7 @@ import (
 )
 
 type userRequest struct {
+	appID      string
 	baseConfig string
 }
 
