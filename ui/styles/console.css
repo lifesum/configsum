@@ -1,0 +1,113 @@
+* {
+	font-family: 'Roboto', sans-serif;
+	line-height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: rgb(34, 34, 34);
+	color: rgb(255, 255, 255);
+	display: block;
+	height: 100%;
+}
+
+html {
+	font-size: 62.5%;
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: rgb(255, 255, 255);
+	cursor: pointer;
+	text-decoration: none;
+	transition: all 0.15s ease;
+}
+
+a:hover {
+	color: rgba(255, 255, 255, 0.6);
+}
+
+a.active {
+	color: rgb(255, 82, 82);
+}
+
+h1 {
+	border-bottom: 0.2rem solid rgba(255, 255, 255, 0.4);
+	font-size: 2.4rem;
+	font-weight: 400;
+	padding-bottom: 1.6rem;
+}
+
+div.debug {
+	border-top: 0.1rem dashed rgba(255, 255, 255, 0.4);
+	color: rgb(155, 155, 155);
+	font-family: 'Roboto Mono', monospace;
+	font-size: 1.2rem;
+	padding: 0.8rem;
+	text-align: center;
+}
+
+header {
+	align-items: flex-start;
+	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.4);
+	display: flex;
+	flex-direction: row;
+	height: 6rem;
+	left: 0;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 69;
+}
+
+header div.logo {
+	font-size: 2rem;
+	font-weight: 300;
+	left: 6rem;
+	position: relative;
+	top: 2rem;
+}
+
+header div.logo span.lead {
+    background: rgba(255, 255, 255, 1);
+	border-radius: 50%;
+    color: rgb(34, 34, 34);
+	font-weight: 700;
+    padding: 0.3rem 0.8rem;
+    text-align: center;
+}
+
+header nav {
+	flex: 1;
+	padding-right: 3rem;
+	position: relative;
+	text-align: right;
+	top: 2.2rem;
+}
+
+header nav ul {
+	display: inline-flex;
+	flex-direction: row;
+	list-style: none;
+}
+
+header nav ul li {
+	font-size: 1.4rem;
+	margin-left: 3.2rem;
+	text-transform: uppercase;
+}
+
+main {
+	padding: 12.5rem 6rem 4rem;
+}
+
+footer {
+	bottom: 0;
+	position: fixed;
+	width: 100%;
+}
+
+div.page {
+	margin: 0 6rem;
+}
