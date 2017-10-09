@@ -38,14 +38,14 @@ func NewUserRepoInstrumentMiddleware(
 
 func (r *instrumentUserRepo) Append(
 	id, baseID, userID string,
-	ruleIDs []string,
+	decisions ruleDecisions,
 	render rendered,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
 		r.track(begin, err, "Append")
 	}(time.Now())
 
-	return r.next.Append(id, baseID, userID, ruleIDs, render)
+	return r.next.Append(id, baseID, userID, decisions, render)
 }
 
 func (r *instrumentUserRepo) GetLatest(
