@@ -7,16 +7,15 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/user"
+	"runtime"
+	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kitprom "github.com/go-kit/kit/metrics/prometheus"
-	"github.com/jmoiron/sqlx"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/lifesum/configsum/pkg/config"
 	"github.com/lifesum/configsum/pkg/pg"
 )
 
@@ -59,6 +58,11 @@ const (
 	lifecycleStart = "start"
 )
 
+// Tasks.
+const (
+	taskConfig = "config"
+)
+
 // Timeouts.
 const (
 	defaultTimeoutRead  = 1 * time.Second
@@ -73,16 +77,19 @@ var revision = "0000000-dev"
 // Default vars.
 var defaultPostgresURI string
 
+type runFunc func([]string, log.Logger) error
+
 func main() {
 	var (
-		begin = time.Now()
+		flagset = flag.NewFlagSet("configsum", flag.ExitOnError)
 
-		debug         = flag.Bool("debug", false, "enable debug logging")
-		intrumentAddr = flag.String("instrument.addir", ":8701", "Listen address for instrumentation")
-		listenAddr    = flag.String("listen.addr", ":8700", "Listen address for HTTP API")
-		postgresURI   = flag.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
+		debug = flagset.Bool("debug", false, "enable debug logging")
 	)
-	flag.Parse()
+
+	flagset.Usage = usage
+	if err := flagset.Parse(os.Args[1:]); err != nil {
+		panic(err)
+	}
 
 	// Setup logging.
 	var logger log.Logger
@@ -97,7 +104,6 @@ func main() {
 			logJob, "configsum",
 			logNow, log.DefaultTimestampUTC,
 			logRevision, revision,
-			logTask, "config",
 		)
 		logger = level.NewFilter(logger, logLevel)
 	}
@@ -109,138 +115,28 @@ func main() {
 
 	logger = log.With(logger, logHostname, hostname)
 
-	// Setup instrunentation.
-	go func(logger log.Logger, addr string) {
-		mux := http.NewServeMux()
-
-		registerMetrics(mux)
-		registerProfile(mux)
-
-		logger.Log(
-			logDuration, time.Since(begin).Nanoseconds(),
-			logLifecycle, lifecycleStart,
-			logListen, addr,
-			logService, "instrument",
-		)
-
-		abort(logger, http.ListenAndServe(addr, mux))
-	}(logger, *intrumentAddr)
-
-	repoLabels := []string{
-		labelOp,
-		labelRepo,
-		labelStore,
+	if len(flagset.Args()) < 1 {
+		usage()
+		os.Exit(1)
 	}
 
-	repoErrCount := kitprom.NewCounterFrom(
-		prometheus.CounterOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "err_count",
-			Help:      "Amount of failed repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoErrCountFunc := func(store, repo, op string) {
-		repoErrCount.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Add(1)
-	}
-
-	repoOpCount := kitprom.NewCounterFrom(
-		prometheus.CounterOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "op_count",
-			Help:      "Amount of successful repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoOpCountFunc := func(store, repo, op string) {
-		repoOpCount.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Add(1)
-	}
-
-	repoOpLatency := kitprom.NewHistogramFrom(
-		prometheus.HistogramOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "op_latency_seconds",
-			Help:      "Latency of successful repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoOpLatencyFunc := func(store, repo, op string, begin time.Time) {
-		repoOpLatency.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Observe(time.Since(begin).Seconds())
-	}
-
-	// Setup clients.
-	db, err := sqlx.Connect(storeRepo, *postgresURI)
-	if err != nil {
-		abort(logger, err)
-	}
-
-	// Setup repos.
-	baseRepo, err := config.NewInmemBaseRepo()
-	if err != nil {
-		abort(logger, err)
-	}
-
-	userRepo, err := config.NewPostgresUserRepo(db)
-	if err != nil {
-		abort(logger, err)
-	}
-	userRepo = config.NewUserRepoInstrumentMiddleware(
-		repoErrCountFunc,
-		repoOpCountFunc,
-		repoOpLatencyFunc,
-		storeRepo,
-	)(userRepo)
-	userRepo = config.NewUserRepoLogMiddleware(logger, storeRepo)(userRepo)
-
-	// Setup service.
 	var (
-		mux          = http.NewServeMux()
-		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
-		svc          = config.NewServiceUser(baseRepo, userRepo)
+		task = strings.ToLower(flagset.Arg(0))
+
+		run runFunc
 	)
 
-	mux.Handle(
-		fmt.Sprintf(`%s/`, prefixConfig),
-		http.StripPrefix(
-			prefixConfig,
-			config.MakeHandler(logger, svc),
-		),
-	)
-
-	// Setup server.
-	srv := &http.Server{
-		Addr:         *listenAddr,
-		Handler:      mux,
-		ReadTimeout:  defaultTimeoutRead,
-		WriteTimeout: defaultTimeoutWrite,
+	switch task {
+	case taskConfig:
+		run = runConfig
+	default:
+		usage()
+		os.Exit(1)
 	}
 
-	_ = level.Info(logger).Log(
-		logDuration, time.Since(begin).Nanoseconds(),
-		logLifecycle, lifecycleStart,
-		logListen, *listenAddr,
-		logService, "api",
-	)
+	logger = log.With(logger, logTask, task)
 
-	abort(logger, srv.ListenAndServe())
+	abort(logger, run(flagset.Args()[1:], logger))
 }
 
 func abort(logger log.Logger, err error) {
@@ -267,6 +163,37 @@ func registerProfile(mux *http.ServeMux) {
 	mux.Handle("/debug/pprof/heap", pprof.Handler("heap"))
 	mux.Handle("/debug/pprof/mutex", pprof.Handler("mutex"))
 	mux.Handle("/debug/pprof/threadcreate", pprof.Handler("threadcreate"))
+}
+
+func usage() {
+	f := `USAGE
+	%s [FLAGS] <cmd> [FLAGS]
+
+COMMANDS
+	config	API offering access to per user rendered configs
+
+VERSION
+	%s (%s)
+`
+
+	fmt.Fprintf(os.Stderr, f, os.Args[0], revision, runtime.Version())
+}
+
+func usageCmd(fs *flag.FlagSet, short string) func() {
+	s := `USAGE
+  configsum %s
+
+FLAGS
+`
+	return func() {
+		fmt.Fprintf(os.Stderr, s, short)
+
+		w := tabwriter.NewWriter(os.Stderr, 0, 2, 2, ' ', 0)
+		fs.VisitAll(func(f *flag.Flag) {
+			fmt.Fprintf(w, "\t-%s\t%s\t%s\n", f.Name, f.DefValue, f.Usage)
+		})
+		_ = w.Flush()
+	}
 }
 
 func init() {
