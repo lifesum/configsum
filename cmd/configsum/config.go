@@ -41,7 +41,7 @@ func runConfig(args []string, logger log.Logger) error {
 			logDuration, time.Since(begin).Nanoseconds(),
 			logLifecycle, lifecycleStart,
 			logListen, addr,
-			logService, "instrument",
+			logService, serviceInstrument,
 		)
 
 		abort(logger, http.ListenAndServe(addr, mux))

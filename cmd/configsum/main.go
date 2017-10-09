@@ -58,9 +58,16 @@ const (
 	lifecycleStart = "start"
 )
 
+// Services.
+const (
+	serviceAPI        = "api"
+	serviceInstrument = "instrument"
+)
+
 // Tasks.
 const (
-	taskConfig = "config"
+	taskConfig  = "config"
+	taskConsole = "console"
 )
 
 // Timeouts.
@@ -129,6 +136,8 @@ func main() {
 	switch task {
 	case taskConfig:
 		run = runConfig
+	case taskConsole:
+		run = runConsole
 	default:
 		usage()
 		os.Exit(1)
