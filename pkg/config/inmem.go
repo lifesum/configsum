@@ -42,12 +42,14 @@ type inmemUserState map[string]map[string][]UserConfig
 
 type inmemUserRepo struct {
 	configs inmemUserState
+	ids     map[string]struct{}
 }
 
 // NewInmemUserRepo returns an in-memory backed UserRepo implementation.
 func NewInmemUserRepo() (UserRepo, error) {
 	return &inmemUserRepo{
 		configs: inmemUserState{},
+		ids:     map[string]struct{}{},
 	}, nil
 }
 
@@ -56,8 +58,11 @@ func (r *inmemUserRepo) Append(
 	decisions ruleDecisions,
 	render rendered,
 ) (UserConfig, error) {
-	_, ok := r.configs[baseID]
-	if !ok {
+	if _, ok := r.ids[id]; ok {
+		return UserConfig{}, errors.Wrap(ErrExists, "id")
+	}
+
+	if _, ok := r.configs[baseID]; !ok {
 		r.configs[baseID] = map[string][]UserConfig{}
 	}
 
@@ -77,16 +82,27 @@ func (r *inmemUserRepo) Append(
 
 	ul = append(ul, c)
 	r.configs[baseID][userID] = ul
+	r.ids[id] = struct{}{}
 
 	return c, nil
 }
 
 func (r *inmemUserRepo) GetLatest(baseID, id string) (UserConfig, error) {
-	return UserConfig{
-		baseID:    baseID,
-		userID:    id,
-		createdAt: time.Now(),
-	}, nil
+	_, ok := r.configs[baseID]
+	if !ok {
+		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("base id '%s'", baseID))
+	}
+
+	cs, ok := r.configs[baseID][id]
+	if !ok {
+		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("user id '%s'", id))
+	}
+
+	if len(cs) == 0 {
+		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("no config '%s'", id))
+	}
+
+	return cs[len(cs)-1], nil
 }
 
 func (r *inmemUserRepo) Setup() error {
