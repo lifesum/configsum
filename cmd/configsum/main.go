@@ -149,7 +149,7 @@ func main() {
 }
 
 func abort(logger log.Logger, err error) {
-	if err != nil {
+	if err == nil {
 		return
 	}
 
