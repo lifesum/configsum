@@ -1,0 +1,25 @@
+dist: trusty
+
+language:
+  - go
+
+go:
+  - 1.9.1
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "9.6"
+
+before_script:
+  - psql -c 'create database configsum_test;' -U postgres
+
+sudo: false
+
+env:
+  - GOBIN=/home/travis/gopath/bin
+
+script:
+  - make check-dependencies
+  - go test -v -race -tags integration ./... -postgres.uri="postgres://postgres@127.0.0.1:5432/configsum_test?sslmode=disable"
