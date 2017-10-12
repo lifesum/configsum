@@ -16,13 +16,31 @@ func runConsole(args []string, logger log.Logger) error {
 		begin   = time.Now()
 		flagset = flag.NewFlagSet("console", flag.ExitOnError)
 
-		listenAddr  = flagset.String("listen.addr", ":8700", "HTTP API bind address")
-		staticLocal = flagset.Bool("static.local", false, "Determines if static assets are loaded from the filesystem.")
+		instrumentAddr = flagset.String("instrument.addr", ":8711", "Listen address for instrumenation")
+		listenAddr     = flagset.String("listen.addr", ":8710", "HTTP API bind address")
+		staticLocal    = flagset.Bool("static.local", false, "Determines if static assets are loaded from the filesystem.")
 	)
 
+	flagset.Usage = usageCmd(flagset, "console [flags]")
 	if err := flagset.Parse(args); err != nil {
 		return err
 	}
+
+	go func(lgoger log.Logger, addr string) {
+		mux := http.NewServeMux()
+
+		registerMetrics(mux)
+		registerProfile(mux)
+
+		logger.Log(
+			logDuration, time.Since(begin).Nanoseconds(),
+			logLifecycle, lifecycleStart,
+			logListen, addr,
+			logService, serviceInstrument,
+		)
+
+		abort(logger, http.ListenAndServe(addr, mux))
+	}(logger, *instrumentAddr)
 
 	serveMux := http.NewServeMux()
 
