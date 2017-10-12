@@ -12,10 +12,11 @@ const tmplIndex = `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
+    <base href="{{ .Base }}">
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto:300,400,500,700" rel="stylesheet">
-    <link href="/styles/normalize.css" rel="stylesheet">
-    <link href="/styles/console.css" rel="stylesheet">
-    <script src="/scripts/console.js" type="text/javascript"></script>
+    <link href="styles/normalize.css" rel="stylesheet">
+    <link href="styles/console.css" rel="stylesheet">
+    <script src="scripts/console.js" type="text/javascript"></script>
   </head>
   <body>
     <script type="text/javascript">
@@ -25,7 +26,7 @@ const tmplIndex = `<!DOCTYPE html>
 </html>`
 
 // MakeHandler returns am http.Handler for the UI.
-func MakeHandler(logger log.Logger, local bool) (http.Handler, error) {
+func MakeHandler(logger log.Logger, base string, local bool) (http.Handler, error) {
 	r := mux.NewRouter()
 
 	tplRoot, err := template.New("root").Parse(tmplIndex)
@@ -43,7 +44,11 @@ func MakeHandler(logger log.Logger, local bool) (http.Handler, error) {
 
 	r.Methods("GET").PathPrefix("/").Name("root").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			tplRoot.Execute(w, nil)
+			tplRoot.Execute(w, struct {
+				Base string
+			}{
+				Base: base,
+			})
 		},
 	)
 

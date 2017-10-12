@@ -40,7 +40,7 @@ routeToString route =
                 Rules ->
                     [ "rules" ]
     in
-        "/" ++ String.join "/" pieces
+        String.join "/" pieces
 
 
 

@@ -15,7 +15,7 @@ help:
 	@echo "make ui-compile-watch     Recompiles the Elm code on file changes (requires elm-live)"
 
 run-console:
-	cd ui && go run ../cmd/configsum/*.go console -static.local
+	cd ui && go run ../cmd/configsum/*.go console -ui.local
 
 setup-dev:
 	psql -d template1 -tc "SELECT 1 FROM pg_database WHERE datname = 'configsum_dev'" | grep -q 1 || psql -d template1 -c "CREATE DATABASE configsum_dev"

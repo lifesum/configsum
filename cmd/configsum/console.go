@@ -18,7 +18,8 @@ func runConsole(args []string, logger log.Logger) error {
 
 		instrumentAddr = flagset.String("instrument.addr", ":8711", "Listen address for instrumenation")
 		listenAddr     = flagset.String("listen.addr", ":8710", "HTTP API bind address")
-		staticLocal    = flagset.Bool("static.local", false, "Determines if static assets are loaded from the filesystem.")
+		uiBase         = flagset.String("ui.base", "/", "Base URI to use for path based mounting")
+		uiLocal        = flagset.Bool("ui.local", false, "Load static assets from the filesystem")
 	)
 
 	flagset.Usage = usageCmd(flagset, "console [flags]")
@@ -44,7 +45,7 @@ func runConsole(args []string, logger log.Logger) error {
 
 	serveMux := http.NewServeMux()
 
-	handler, err := ui.MakeHandler(logger, *staticLocal)
+	handler, err := ui.MakeHandler(logger, *uiBase, *uiLocal)
 	if err != nil {
 		abort(logger, err)
 	}
