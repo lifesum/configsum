@@ -1,9 +1,12 @@
 package generate
 
 import (
+	crand "crypto/rand"
 	"encoding/base64"
 	"math/rand"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ~!$%^&*()_+{}:\"|<>?`-=[];'\\,./"
@@ -34,6 +37,20 @@ func RandomString(n int) string {
 			n,
 		),
 	)
+}
+
+// SecureToken returns a securely generated random string.
+//
+// It will error if the system's secure random number generator fails.
+func SecureToken(n int) (string, error) {
+	b := make([]byte, n)
+
+	_, err := crand.Read(b)
+	if err != nil {
+		return "", errors.Wrap(err, "SecureToken")
+	}
+
+	return base64.URLEncoding.EncodeToString(b), nil
 }
 
 func randomBytes(src rand.Source, bytes string, n int) []byte {
