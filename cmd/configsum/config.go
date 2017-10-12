@@ -114,7 +114,7 @@ func runConfig(args []string, logger log.Logger) error {
 	}
 
 	// Setup repos.
-	baseRepo, err := config.NewInmemBaseRepo()
+	baseRepo, err := config.NewInmemBaseRepo(nil)
 	if err != nil {
 		return err
 	}

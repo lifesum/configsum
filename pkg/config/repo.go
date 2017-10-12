@@ -4,12 +4,15 @@ import "time"
 
 // BaseRepo provides access to base configs.
 type BaseRepo interface {
-	Get(name string) (*BaseConfig, error)
+	Get(appID, name string) (BaseConfig, error)
 }
 
 // BaseConfig is the entire space of available parameters.
 type BaseConfig struct {
-	name string
+	appID    string
+	id       string
+	name     string
+	rendered rendered
 }
 
 type rendered map[string]interface{}
