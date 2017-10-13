@@ -115,9 +115,9 @@ func (r *pgRepo) Lookup(id string) (Client, error) {
 
 			return r.Lookup(id)
 		case sql.ErrNoRows:
-			return Client{}, errors.Wrap(ErrNotFound, "config get")
+			return Client{}, errors.Wrap(ErrNotFound, "client lookup")
 		default:
-			return Client{}, errors.Wrap(err, "config get")
+			return Client{}, errors.Wrap(err, "client lookup")
 		}
 	}
 

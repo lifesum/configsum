@@ -12,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
 )
 
@@ -131,10 +132,29 @@ func runConfig(args []string, logger log.Logger) error {
 	)(userRepo)
 	userRepo = config.NewUserRepoLogMiddleware(logger, storeRepo)(userRepo)
 
+	clientRepo := client.NewPostgresRepo(db)
+	clientRepo = client.NewRepoInstrumentMiddleware(
+		repoErrCountFunc,
+		repoOpCountFunc,
+		repoOpLatencyFunc,
+		storeRepo,
+	)(clientRepo)
+	clientRepo = client.NewRepoLogMiddleware(logger, storeRepo)(clientRepo)
+
+	tokenRepo := client.NewPostgresTokenRepo(db)
+	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
+		repoErrCountFunc,
+		repoOpCountFunc,
+		repoOpLatencyFunc,
+		storeRepo,
+	)(tokenRepo)
+	tokenRepo = client.NewTokenRepoLogMiddleware(logger, storeRepo)(tokenRepo)
+
 	// Setup service.
 	var (
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
+		clientSvc    = client.NewService(clientRepo, tokenRepo)
 		svc          = config.NewServiceUser(baseRepo, userRepo)
 	)
 
@@ -142,7 +162,7 @@ func runConfig(args []string, logger log.Logger) error {
 		fmt.Sprintf(`%s/`, prefixConfig),
 		http.StripPrefix(
 			prefixConfig,
-			config.MakeHandler(logger, svc),
+			config.MakeHandler(logger, svc, clientSvc),
 		),
 	)
 

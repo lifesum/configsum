@@ -11,7 +11,7 @@ import (
 
 // ServiceUser provides user specific configs.
 type ServiceUser interface {
-	Render(appID, baseName, userID string) (UserConfig, error)
+	Render(clientID, baseName, userID string) (UserConfig, error)
 }
 
 type serviceUser struct {
@@ -29,8 +29,8 @@ func NewServiceUser(baseRepo BaseRepo, userRepo UserRepo) ServiceUser {
 	}
 }
 
-func (s *serviceUser) Render(appID, baseName, userID string) (UserConfig, error) {
-	bc, err := s.baseRepo.Get(appID, baseName)
+func (s *serviceUser) Render(clientID, baseName, userID string) (UserConfig, error) {
+	bc, err := s.baseRepo.Get(clientID, baseName)
 	if err != nil {
 		return UserConfig{}, errors.Wrap(err, "baseRepo.Get")
 	}

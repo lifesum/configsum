@@ -14,6 +14,9 @@ help:
 	@echo "make ui-compile           Compiles Elm code to Javascript (requires elm-make)"
 	@echo "make ui-compile-watch     Recompiles the Elm code on file changes (requires elm-live)"
 
+run-config:
+	go run ./cmd/configsum/*.go config
+
 run-console:
 	cd ui && go run ../cmd/configsum/*.go console -ui.local
 

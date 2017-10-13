@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
+
+	"github.com/lifesum/configsum/pkg/client"
 )
 
 type userRequest struct {
-	appID      string
 	baseConfig string
 }
 
@@ -24,9 +25,12 @@ func (r userResponse) StatusCode() int {
 
 func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(userRequest)
+		var (
+			req      = request.(userRequest)
+			clientID = ctx.Value(client.ContextKeyClientID).(string)
+		)
 
-		c, err := svc.Render(req.appID, req.baseConfig, "id123")
+		c, err := svc.Render(clientID, req.baseConfig, "id123")
 		if err != nil {
 			return nil, err
 		}
