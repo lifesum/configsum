@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 
+	"github.com/lifesum/configsum/pkg/auth"
 	"github.com/lifesum/configsum/pkg/client"
 )
 
@@ -28,9 +29,10 @@ func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 		var (
 			req      = request.(userRequest)
 			clientID = ctx.Value(client.ContextKeyClientID).(string)
+			userID   = ctx.Value(auth.ContextKeyUserID).(string)
 		)
 
-		c, err := svc.Render(clientID, req.baseConfig, "id123")
+		c, err := svc.Render(clientID, req.baseConfig, userID)
 		if err != nil {
 			return nil, err
 		}

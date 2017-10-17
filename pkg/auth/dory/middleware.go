@@ -7,6 +7,8 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/pkg/errors"
+
+	"github.com/lifesum/configsum/pkg/auth"
 )
 
 type contextKey string
@@ -14,7 +16,7 @@ type contextKey string
 // Context keys.
 const (
 	contextKeySignature contextKey = "dorySignature"
-	contextKeyUserID    contextKey = "userID"
+	contextKeyUserID    contextKey = "doryUserID"
 )
 
 // AuthMiddleware returns a pluggable endpoint.Middleware which transparently
@@ -42,6 +44,8 @@ func AuthMiddleware(secret string) endpoint.Middleware {
 			if s != signature {
 				return nil, errors.Wrap(ErrSignatureMissmatch, "auth")
 			}
+
+			ctx = context.WithValue(ctx, auth.ContextKeyUserID, userID)
 
 			return next(ctx, request)
 		}
