@@ -22,4 +22,6 @@ env:
 
 script:
   - make check-dependencies
-  - go test -v -race -tags integration ./... -postgres.uri="postgres://postgres@127.0.0.1:5432/configsum_test?sslmode=disable"
+  - go test -v -race ./pkg/auth/...
+  - go test -v -race -tags integration ./pkg/client/... -postgres.uri="postgres://postgres@127.0.0.1:5432/configsum_test?sslmode=disable"
+  - go test -v -race -tags integration ./pkg/config/... -postgres.uri="postgres://postgres@127.0.0.1:5432/configsum_test?sslmode=disable"
