@@ -7,16 +7,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type inmemBaseState map[string]map[string]BaseConfig
+// InmemBaseState is a container to pass initial state for the inmem repo.
+type InmemBaseState map[string]map[string]BaseConfig
 
 type inmemBaseRepo struct {
-	configs inmemBaseState
+	configs InmemBaseState
 }
 
 // NewInmemBaseRepo returns an in-memory backed BaseRepo implementation.
-func NewInmemBaseRepo(initial inmemBaseState) (BaseRepo, error) {
+func NewInmemBaseRepo(initial InmemBaseState) (BaseRepo, error) {
 	if initial == nil {
-		initial = inmemBaseState{}
+		initial = InmemBaseState{}
 	}
 
 	return &inmemBaseRepo{

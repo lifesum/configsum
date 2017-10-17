@@ -35,7 +35,7 @@ func (s *serviceUser) Render(clientID, baseName, userID string) (UserConfig, err
 		return UserConfig{}, errors.Wrap(err, "baseRepo.Get")
 	}
 
-	uc, err := s.userRepo.GetLatest(bc.id, userID)
+	uc, err := s.userRepo.GetLatest(bc.ID, userID)
 	if err != nil {
 		switch errors.Cause(err) {
 		case ErrNotFound:
@@ -47,7 +47,7 @@ func (s *serviceUser) Render(clientID, baseName, userID string) (UserConfig, err
 
 	// TODO(nabilm): Create temp config with rules applied
 
-	if reflect.DeepEqual(bc.rendered, uc.rendered) {
+	if reflect.DeepEqual(bc.Rendered, uc.rendered) {
 		return uc, nil
 	}
 
@@ -56,5 +56,5 @@ func (s *serviceUser) Render(clientID, baseName, userID string) (UserConfig, err
 		return UserConfig{}, errors.Wrap(err, "create ulid")
 	}
 
-	return s.userRepo.Append(id.String(), bc.id, userID, nil, bc.rendered)
+	return s.userRepo.Append(id.String(), bc.ID, userID, nil, bc.Rendered)
 }

@@ -9,19 +9,19 @@ import (
 
 func TestServiceUserRender(t *testing.T) {
 	var (
-		appID      = randString(characterSet)
+		clientID   = randString(characterSet)
 		baseID     = randString(characterSet)
 		baseName   = randString(characterSet)
 		baseRender = rendered{
 			randString(characterSet): false,
 		}
-		baseRepo, _ = NewInmemBaseRepo(inmemBaseState{
-			appID: map[string]BaseConfig{
+		baseRepo, _ = NewInmemBaseRepo(InmemBaseState{
+			clientID: map[string]BaseConfig{
 				baseName: BaseConfig{
-					appID:    appID,
-					id:       baseID,
-					name:     baseName,
-					rendered: baseRender,
+					ClientID: clientID,
+					ID:       baseID,
+					Name:     baseName,
+					Rendered: baseRender,
 				},
 			},
 		})
@@ -30,7 +30,7 @@ func TestServiceUserRender(t *testing.T) {
 		svc         = NewServiceUser(baseRepo, userRepo)
 	)
 
-	uc, err := svc.Render(appID, baseName, userID)
+	uc, err := svc.Render(clientID, baseName, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestServiceUserRender(t *testing.T) {
 		t.Errorf("have %#v,want %#v", have, want)
 	}
 
-	rc, err := svc.Render(appID, baseName, userID)
+	rc, err := svc.Render(clientID, baseName, userID)
 	if err != nil {
 		t.Fatal(err)
 	}
