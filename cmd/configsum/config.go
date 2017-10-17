@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -26,6 +28,7 @@ func runConfig(args []string, logger log.Logger) error {
 
 		authDory      = flagset.Bool("auth.dory", false, "Toggle Dory Authentication")
 		dorySecret    = flagset.String("dory.secret", "", "Shared secret for Dory Authentication middleware")
+		baseState     = flagset.String("base.state", "", "Initial base_config repo state")
 		intrumentAddr = flagset.String("instrument.addir", ":8701", "Listen address for instrumentation")
 		listenAddr    = flagset.String("listen.addr", ":8700", "Listen address for HTTP API")
 		postgresURI   = flagset.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
@@ -120,7 +123,41 @@ func runConfig(args []string, logger log.Logger) error {
 	}
 
 	// Setup repos.
-	baseRepo, err := config.NewInmemBaseRepo(nil)
+	var state config.InmemBaseState
+
+	// TODO(xla): Temporary solution to set up base configs without proper repo
+	// integration.
+	if *baseState != "" {
+		f, err := os.Open(*baseState)
+		if err != nil {
+			return err
+		}
+
+		t := struct {
+			ClientID string                 `json:"clientID"`
+			ID       string                 `json:"id"`
+			Name     string                 `json:"name"`
+			Rendered map[string]interface{} `json:"rendered"`
+		}{}
+
+		err = json.NewDecoder(f).Decode(&t)
+		if err != nil {
+			return err
+		}
+
+		state = config.InmemBaseState{
+			t.ClientID: map[string]config.BaseConfig{
+				t.Name: config.BaseConfig{
+					ClientID: t.ClientID,
+					ID:       t.ID,
+					Name:     t.Name,
+					Rendered: t.Rendered,
+				},
+			},
+		}
+	}
+
+	baseRepo, err := config.NewInmemBaseRepo(state)
 	if err != nil {
 		return err
 	}
