@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/lifesum/configsum/pkg/auth/dory"
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
 )
@@ -21,6 +24,8 @@ func runConfig(args []string, logger log.Logger) error {
 		begin   = time.Now()
 		flagset = flag.NewFlagSet("config", flag.ExitOnError)
 
+		authDory      = flagset.Bool("auth.dory", false, "Toggle Dory Authentication")
+		dorySecret    = flagset.String("dory.secret", "", "Shared secret for Dory Authentication middleware")
 		intrumentAddr = flagset.String("instrument.addir", ":8701", "Listen address for instrumentation")
 		listenAddr    = flagset.String("listen.addr", ":8700", "Listen address for HTTP API")
 		postgresURI   = flagset.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
@@ -154,15 +159,26 @@ func runConfig(args []string, logger log.Logger) error {
 	var (
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
-		clientSvc    = client.NewService(clientRepo, tokenRepo)
+		clientSVC    = client.NewService(clientRepo, tokenRepo)
 		svc          = config.NewServiceUser(baseRepo, userRepo)
+
+		auth endpoint.Middleware
+		opts []kithttp.ServerOption
 	)
+
+	auth = endpoint.Chain(client.AuthMiddleware(clientSVC))
+	opts = append(opts, kithttp.ServerBefore(client.HTTPToContext))
+
+	if *authDory {
+		auth = endpoint.Chain(auth, dory.AuthMiddleware(*dorySecret))
+		opts = append(opts, kithttp.ServerBefore(dory.HTTPToContext))
+	}
 
 	mux.Handle(
 		fmt.Sprintf(`%s/`, prefixConfig),
 		http.StripPrefix(
 			prefixConfig,
-			config.MakeHandler(logger, svc, clientSvc),
+			config.MakeHandler(logger, svc, auth, opts...),
 		),
 	)
 

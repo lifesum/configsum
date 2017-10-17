@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
+	"github.com/lifesum/configsum/pkg/auth/dory"
 	"github.com/lifesum/configsum/pkg/client"
 )
 
@@ -23,21 +25,25 @@ const (
 func MakeHandler(
 	logger log.Logger,
 	svc ServiceUser,
-	clientSVC client.Service,
+	auth endpoint.Middleware,
+	opts ...kithttp.ServerOption,
 ) http.Handler {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
+	opts = append(
+		opts,
+		kithttp.ServerBefore(dory.HTTPToContext),
+		kithttp.ServerErrorEncoder(encodeError),
+		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
+	)
+
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9]+}`).Name("configUser").Handler(
 		kithttp.NewServer(
-			client.AuthMiddleware(clientSVC)(
-				userEndpoint(svc),
-			),
+			auth(userEndpoint(svc)),
 			decodeUserRequest,
 			kithttp.EncodeJSONResponse,
-			kithttp.ServerBefore(client.HTTPToContext),
-			kithttp.ServerErrorEncoder(encodeError),
-			kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
+			opts...,
 		),
 	)
 
