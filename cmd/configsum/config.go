@@ -14,11 +14,18 @@ import (
 	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/lifesum/configsum/pkg/auth/dory"
+	"github.com/lifesum/configsum/pkg/auth/simple"
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
+)
+
+const (
+	authDory   = "dory"
+	authSimple = "simple"
 )
 
 func runConfig(args []string, logger log.Logger) error {
@@ -26,7 +33,7 @@ func runConfig(args []string, logger log.Logger) error {
 		begin   = time.Now()
 		flagset = flag.NewFlagSet("config", flag.ExitOnError)
 
-		authDory      = flagset.Bool("auth.dory", false, "Toggle Dory Authentication")
+		authMethod    = flagset.String("auth", authSimple, "User authenticaiton method to use (dory, simple)")
 		dorySecret    = flagset.String("dory.secret", "", "Shared secret for Dory Authentication middleware")
 		baseState     = flagset.String("base.state", "", "Initial base_config repo state")
 		intrumentAddr = flagset.String("instrument.addir", ":8701", "Listen address for instrumentation")
@@ -206,9 +213,15 @@ func runConfig(args []string, logger log.Logger) error {
 	auth = endpoint.Chain(client.AuthMiddleware(clientSVC))
 	opts = append(opts, kithttp.ServerBefore(client.HTTPToContext))
 
-	if *authDory {
+	switch *authMethod {
+	case authDory:
 		auth = endpoint.Chain(auth, dory.AuthMiddleware(*dorySecret))
 		opts = append(opts, kithttp.ServerBefore(dory.HTTPToContext))
+	case authSimple:
+		auth = endpoint.Chain(auth, simple.AuthMiddleware())
+		opts = append(opts, kithttp.ServerBefore(simple.HTTPToContext))
+	default:
+		return errors.New(fmt.Sprintf("unsupported auth: '%s'", *authMethod))
 	}
 
 	mux.Handle(
