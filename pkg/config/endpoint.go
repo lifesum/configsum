@@ -16,8 +16,12 @@ type userRequest struct {
 }
 
 type userResponse struct {
-	BaseConfig string    `json:"baseConfig"`
-	CreatedAt  time.Time `json:"createdAt"`
+	baseID    string
+	baseName  string
+	clientID  string
+	id        string
+	rendered  rendered
+	createdAt time.Time
 }
 
 func (r userResponse) StatusCode() int {
@@ -38,8 +42,12 @@ func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 		}
 
 		return userResponse{
-			BaseConfig: c.baseID,
-			CreatedAt:  c.createdAt,
+			baseID:    c.baseID,
+			baseName:  req.baseConfig,
+			clientID:  clientID,
+			id:        c.id,
+			rendered:  c.rendered,
+			createdAt: c.createdAt,
 		}, nil
 	}
 }
