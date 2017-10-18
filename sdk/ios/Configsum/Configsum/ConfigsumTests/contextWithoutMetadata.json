@@ -1,0 +1,19 @@
+{
+    "app" : {
+        "version" : "8.6.0"
+    },
+    "metadata" : null,
+    "device" : {
+        "os" : {
+            "platform" : "iOS",
+            "version" : "11.0"
+        },
+        "location" : {
+            "locale" : "en-US",
+            "timezoneOffset" : 7200
+        }
+    },
+    "user" : {
+        "age" : 20
+    }
+}
