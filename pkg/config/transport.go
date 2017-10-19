@@ -46,7 +46,7 @@ func MakeHandler(
 		kithttp.ServerFinalizer(serverFinalizer(log.With(logger, "route", "configUser"))),
 	)
 
-	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9]+}`).Name("configUser").Handler(
+	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
 		kithttp.NewServer(
 			auth(userEndpoint(svc)),
 			decodeUserRequest,
