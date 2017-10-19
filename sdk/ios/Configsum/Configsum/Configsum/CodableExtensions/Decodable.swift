@@ -5,15 +5,15 @@
 //  Created by Michel Tabari on 2017-10-17.
 //  From https://github.com/zoul/generic-json-swift
 
-extension JSON: Decodable {
+extension Metadata: Decodable {
     
     public init(from decoder: Decoder) throws {
         
         let container = try decoder.singleValueContainer()
         
-        if let object = try? container.decode([String: JSON].self) {
+        if let object = try? container.decode([String: Metadata].self) {
             self = .object(object)
-        } else if let array = try? container.decode([JSON].self) {
+        } else if let array = try? container.decode([Metadata].self) {
             self = .array(array)
         } else if let string = try? container.decode(String.self) {
             self = .string(string)
@@ -25,7 +25,7 @@ extension JSON: Decodable {
             self = .null
         } else {
             throw DecodingError.dataCorrupted(
-                .init(codingPath: decoder.codingPath, debugDescription: "Invalid JSON value.")
+                .init(codingPath: decoder.codingPath, debugDescription: "Invalid Metadata value.")
             )
         }
     }

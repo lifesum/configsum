@@ -7,9 +7,9 @@
 
 import Foundation
 
-extension JSON {
+extension Metadata {
     
-    /// Create a JSON value from anything. Argument has to be a valid JSON structure:
+    /// Create a Metadata value from anything. Argument has to be a valid Metadata structure:
     /// A `Float`, `Int`, `String`, `Bool`, an `Array` of those types or a `Dictionary`
     /// of those types.
     public init(_ value: Any) throws {
@@ -23,51 +23,51 @@ extension JSON {
         case let bool as Bool:
             self = .bool(bool)
         case let array as [Any]:
-            self = .array(try array.map(JSON.init))
+            self = .array(try array.map(Metadata.init))
         case let dict as [String:Any]:
-            self = .object(try dict.mapValues(JSON.init))
+            self = .object(try dict.mapValues(Metadata.init))
         default:
             throw JSONError.decodingError
         }
     }
 }
 
-extension JSON {
+extension Metadata {
     
-    /// Create a JSON value from a `Codable`. This will give you access to the “raw”
-    /// encoded JSON value the `Codable` is serialized into. And hopefully, you could
-    /// encode the resulting JSON value and decode the original `Codable` back.
+    /// Create a Metadata value from a `Codable`. This will give you access to the “raw”
+    /// encoded Metadata value the `Codable` is serialized into. And hopefully, you could
+    /// encode the resulting Metadata value and decode the original `Codable` back.
     public init<T: Codable>(codable: T) throws {
         let encoded = try JSONEncoder().encode(codable)
-        self = try JSONDecoder().decode(JSON.self, from: encoded)
+        self = try JSONDecoder().decode(Metadata.self, from: encoded)
     }
 }
 
-extension JSON: ExpressibleByBooleanLiteral {
+extension Metadata: ExpressibleByBooleanLiteral {
     
     public init(booleanLiteral value: Bool) {
         self = .bool(value)
     }
 }
 
-extension JSON: ExpressibleByNilLiteral {
+extension Metadata: ExpressibleByNilLiteral {
     
     public init(nilLiteral: ()) {
         self = .null
     }
 }
 
-extension JSON: ExpressibleByArrayLiteral {
+extension Metadata: ExpressibleByArrayLiteral {
     
-    public init(arrayLiteral elements: JSON...) {
+    public init(arrayLiteral elements: Metadata...) {
         self = .array(elements)
     }
 }
 
-extension JSON: ExpressibleByDictionaryLiteral {
+extension Metadata: ExpressibleByDictionaryLiteral {
     
-    public init(dictionaryLiteral elements: (String, JSON)...) {
-        var object: [String:JSON] = [:]
+    public init(dictionaryLiteral elements: (String, Metadata)...) {
+        var object: [String:Metadata] = [:]
         for (k, v) in elements {
             object[k] = v
         }
@@ -75,21 +75,21 @@ extension JSON: ExpressibleByDictionaryLiteral {
     }
 }
 
-extension JSON: ExpressibleByFloatLiteral {
+extension Metadata: ExpressibleByFloatLiteral {
     
     public init(floatLiteral value: Float) {
         self = .number(value)
     }
 }
 
-extension JSON: ExpressibleByIntegerLiteral {
+extension Metadata: ExpressibleByIntegerLiteral {
     
     public init(integerLiteral value: Int) {
         self = .number(Float(value))
     }
 }
 
-extension JSON: ExpressibleByStringLiteral {
+extension Metadata: ExpressibleByStringLiteral {
     
     public init(stringLiteral value: String) {
         self = .string(value)
