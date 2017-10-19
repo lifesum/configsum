@@ -13,6 +13,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
+	"github.com/lifesum/configsum/pkg/auth/dory"
+	"github.com/lifesum/configsum/pkg/auth/simple"
 	"github.com/lifesum/configsum/pkg/client"
 )
 
@@ -87,6 +89,10 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	case ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
 	case client.ErrNotFound, client.ErrSecretMissing:
+		w.WriteHeader(http.StatusUnauthorized)
+	case dory.ErrSignatureMissing, dory.ErrSignatureMissmatch, dory.ErrUserIDMissing:
+		w.WriteHeader(http.StatusUnauthorized)
+	case simple.ErrUserIDMissing:
 		w.WriteHeader(http.StatusUnauthorized)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
