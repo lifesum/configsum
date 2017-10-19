@@ -123,6 +123,8 @@ func runConfig(args []string, logger log.Logger) error {
 		).Observe(time.Since(begin).Seconds())
 	}
 
+	logger = log.With(logger, logService, serviceAPI)
+
 	// Setup clients.
 	db, err := sqlx.Connect(storeRepo, *postgresURI)
 	if err != nil {
@@ -221,7 +223,7 @@ func runConfig(args []string, logger log.Logger) error {
 		auth = endpoint.Chain(auth, simple.AuthMiddleware())
 		opts = append(opts, kithttp.ServerBefore(simple.HTTPToContext))
 	default:
-		return errors.New(fmt.Sprintf("unsupported auth: '%s'", *authMethod))
+		return errors.Errorf("unsupported auth: '%s'", *authMethod)
 	}
 
 	mux.Handle(
@@ -244,7 +246,6 @@ func runConfig(args []string, logger log.Logger) error {
 		logDuration, time.Since(begin).Nanoseconds(),
 		logLifecycle, lifecycleStart,
 		logListen, *listenAddr,
-		logService, "api",
 	)
 
 	return srv.ListenAndServe()

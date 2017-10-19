@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
-	"github.com/lifesum/configsum/pkg/auth/dory"
 	"github.com/lifesum/configsum/pkg/client"
 )
 
@@ -39,9 +38,10 @@ func MakeHandler(
 
 	opts = append(
 		opts,
-		kithttp.ServerBefore(dory.HTTPToContext),
+		kithttp.ServerBefore(kithttp.PopulateRequestContext),
 		kithttp.ServerErrorEncoder(encodeError),
 		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
+		kithttp.ServerFinalizer(serverFinalizer(log.With(logger, "route", "configUser"))),
 	)
 
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9]+}`).Name("configUser").Handler(
@@ -99,4 +99,29 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	}{
 		Reason: err.Error(),
 	})
+}
+
+func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
+	return func(ctx context.Context, code int, r *http.Request) {
+		_ = logger.Log(
+			"request", map[string]interface{}{
+				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
+				"header":           r.Header,
+				"host":             ctx.Value(kithttp.ContextKeyRequestHost),
+				"method":           ctx.Value(kithttp.ContextKeyRequestMethod),
+				"path":             ctx.Value(kithttp.ContextKeyRequestPath),
+				"proto":            ctx.Value(kithttp.ContextKeyRequestProto),
+				"referer":          ctx.Value(kithttp.ContextKeyRequestReferer),
+				"remoteAddr":       ctx.Value(kithttp.ContextKeyRequestRemoteAddr),
+				"requestId":        ctx.Value(kithttp.ContextKeyRequestXRequestID),
+				"requestUri":       ctx.Value(kithttp.ContextKeyRequestURI),
+				"transferEncoding": r.TransferEncoding,
+			},
+			"response", map[string]interface{}{
+				"header":     ctx.Value(kithttp.ContextKeyResponseHeaders).(http.Header),
+				"size":       ctx.Value(kithttp.ContextKeyResponseSize).(int64),
+				"statusCode": code,
+			},
+		)
+	}
 }
