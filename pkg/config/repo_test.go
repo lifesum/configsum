@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
-	"github.com/pkg/errors"
+
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 func testUserRepoGetLatest(t *testing.T, p prepareFunc) {
@@ -90,7 +91,7 @@ func testUserRepoGetLatestNotFound(t *testing.T, p prepareFunc) {
 	)
 
 	_, err := repo.GetLatest(baseID, userID)
-	if have, want := errors.Cause(err), ErrNotFound; have != want {
+	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -121,7 +122,7 @@ func testUserRepoAppendDuplicate(t *testing.T, p prepareFunc) {
 	}
 
 	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
-	if have, want := errors.Cause(err), ErrExists; have != want {
+	if have, want := errors.Cause(err), errors.ErrExists; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/pkg/errors"
 
 	"github.com/lifesum/configsum/pkg/auth"
+	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 )
 
@@ -25,7 +25,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 func TestAuthMiddlewareUserIDMissing(t *testing.T) {
 	_, err := AuthMiddleware()(nopEndpoint(t, ""))(context.TODO(), nil)
-	if have, want := errors.Cause(err), ErrUserIDMissing; have != want {
+	if have, want := errors.Cause(err), errors.ErrUserIDMissing; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

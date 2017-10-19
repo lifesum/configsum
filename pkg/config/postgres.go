@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 
+	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/pg"
 )
 
@@ -85,7 +85,7 @@ func (r *pgUserRepo) Append(
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrDuplicateKey:
-			return UserConfig{}, errors.Wrap(ErrExists, "user config")
+			return UserConfig{}, errors.Wrap(errors.ErrExists, "user config")
 		case pg.ErrRelationNotFound:
 			if err := r.Setup(); err != nil {
 				return UserConfig{}, err
@@ -134,7 +134,7 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 
 			return r.GetLatest(baseID, userID)
 		case sql.ErrNoRows:
-			return UserConfig{}, errors.Wrap(ErrNotFound, "get user config")
+			return UserConfig{}, errors.Wrap(errors.ErrNotFound, "get user config")
 
 		default:
 			return UserConfig{}, fmt.Errorf("get: %s", err)

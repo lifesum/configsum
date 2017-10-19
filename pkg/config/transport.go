@@ -11,11 +11,8 @@ import (
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 
-	"github.com/lifesum/configsum/pkg/auth/dory"
-	"github.com/lifesum/configsum/pkg/auth/simple"
-	"github.com/lifesum/configsum/pkg/client"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 // Headers.
@@ -86,13 +83,11 @@ func encodeUserResponse(
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	switch errors.Cause(err) {
-	case ErrNotFound:
+	case errors.ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
-	case client.ErrNotFound, client.ErrSecretMissing:
+	case errors.ErrClientNotFound, errors.ErrSecretMissing:
 		w.WriteHeader(http.StatusUnauthorized)
-	case dory.ErrSignatureMissing, dory.ErrSignatureMissmatch, dory.ErrUserIDMissing:
-		w.WriteHeader(http.StatusUnauthorized)
-	case simple.ErrUserIDMissing:
+	case errors.ErrSignatureMissing, errors.ErrSignatureMissmatch, errors.ErrUserIDMissing:
 		w.WriteHeader(http.StatusUnauthorized)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)

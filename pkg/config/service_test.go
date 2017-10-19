@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 func TestServiceUserRender(t *testing.T) {
@@ -69,7 +69,7 @@ func TestServiceUserRenderConfigMissingBaseConfig(t *testing.T) {
 	)
 
 	_, err := svc.Render(appID, baseName, userID)
-	if have, want := errors.Cause(err), ErrNotFound; have != want {
+	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

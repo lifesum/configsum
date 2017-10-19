@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 
+	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/pg"
 )
 
@@ -115,7 +115,7 @@ func (r *pgRepo) Lookup(id string) (Client, error) {
 
 			return r.Lookup(id)
 		case sql.ErrNoRows:
-			return Client{}, errors.Wrap(ErrNotFound, "client lookup")
+			return Client{}, errors.Wrap(errors.ErrNotFound, "client lookup")
 		default:
 			return Client{}, errors.Wrap(err, "client lookup")
 		}
@@ -219,7 +219,7 @@ func (r *pgTokenRepo) Lookup(secret string) (Token, error) {
 
 			return r.Lookup(secret)
 		case sql.ErrNoRows:
-			return Token{}, errors.Wrap(ErrNotFound, "token lookup")
+			return Token{}, errors.Wrap(errors.ErrNotFound, "token lookup")
 		default:
 			return Token{}, errors.Wrap(err, "token lookup")
 		}

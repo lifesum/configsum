@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 // InmemBaseState is a container to pass initial state for the inmem repo.
@@ -28,12 +28,12 @@ func NewInmemBaseRepo(initial InmemBaseState) (BaseRepo, error) {
 func (s *inmemBaseRepo) Get(appID, name string) (BaseConfig, error) {
 	app, ok := s.configs[appID]
 	if !ok {
-		return BaseConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("app id '%s'", appID))
+		return BaseConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("app id '%s'", appID))
 	}
 
 	bc, ok := app[name]
 	if !ok {
-		return BaseConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("base config name '%s'", name))
+		return BaseConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("base config name '%s'", name))
 	}
 
 	return bc, nil
@@ -60,7 +60,7 @@ func (r *inmemUserRepo) Append(
 	render rendered,
 ) (UserConfig, error) {
 	if _, ok := r.ids[id]; ok {
-		return UserConfig{}, errors.Wrap(ErrExists, "id")
+		return UserConfig{}, errors.Wrap(errors.ErrExists, "id")
 	}
 
 	if _, ok := r.configs[baseID]; !ok {
@@ -91,16 +91,16 @@ func (r *inmemUserRepo) Append(
 func (r *inmemUserRepo) GetLatest(baseID, id string) (UserConfig, error) {
 	_, ok := r.configs[baseID]
 	if !ok {
-		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("base id '%s'", baseID))
+		return UserConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("base id '%s'", baseID))
 	}
 
 	cs, ok := r.configs[baseID][id]
 	if !ok {
-		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("user id '%s'", id))
+		return UserConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("user id '%s'", id))
 	}
 
 	if len(cs) == 0 {
-		return UserConfig{}, errors.Wrap(ErrNotFound, fmt.Sprintf("no config '%s'", id))
+		return UserConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("no config '%s'", id))
 	}
 
 	return cs[len(cs)-1], nil
