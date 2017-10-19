@@ -7,11 +7,11 @@
 
 import Foundation
 
-public enum JSON {
+public enum Metadata {
     case string(String)
     case number(Float)
-    case object([String:JSON])
-    case array([JSON])
+    case object([String:Metadata])
+    case array([Metadata])
     case bool(Bool)
     case null
 }
@@ -20,9 +20,9 @@ public enum JSONError: Swift.Error {
     case decodingError
 }
 
-extension JSON: Equatable {
+extension Metadata: Equatable {
     
-    public static func == (lhs: JSON, rhs: JSON) -> Bool {
+    public static func == (lhs: Metadata, rhs: Metadata) -> Bool {
         switch (lhs, rhs) {
         case (.string(let s1), .string(let s2)):
             return s1 == s2
@@ -42,7 +42,7 @@ extension JSON: Equatable {
     }
 }
 
-extension JSON: CustomDebugStringConvertible {
+extension Metadata: CustomDebugStringConvertible {
     
     public var debugDescription: String {
         switch self {

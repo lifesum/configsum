@@ -46,7 +46,7 @@ enum HTTPError: Error {
         switch self {
         case .noData: return "HTTP error: no data"
         case .noResponse: return "HTTP error: no response object"
-        case .badInput: return "Bad JSON input"
+        case .badInput: return "Bad Metadata input"
         case let .notFound(body): return parseErrorResponse(body)
         case let .badRequest(body): return parseErrorResponse(body)
         case let .unauthorized(body): return parseErrorResponse(body)

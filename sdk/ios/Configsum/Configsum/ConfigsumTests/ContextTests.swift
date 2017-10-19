@@ -29,7 +29,7 @@ class ContextTests: XCTestCase {
     }
     
     func testEncodeContextWithoutMetadata() {
-        // Read the JSON data from the test file
+        // Read the Metadata data from the test file
         let jsonFilePath = Bundle(for: type(of: self)).path(forResource: self.contextWithoutMetadata, ofType: "json")
         let dataFromJSONFile = NSData(contentsOfFile: jsonFilePath!)!
         
@@ -50,7 +50,7 @@ class ContextTests: XCTestCase {
     }
     
     func testEncodeContextWithMetadata() {
-        // Read the JSON data from the test file
+        // Read the Metadata data from the test file
         let jsonFilePath = Bundle(for: type(of: self)).path(forResource: self.contextWithMetadata, ofType: "json")
         let dataFromJSONFile = NSData(contentsOfFile: jsonFilePath!)!
         
@@ -72,7 +72,7 @@ class ContextTests: XCTestCase {
     }
     
     func testEncodeContextWithComplexMetadata() {
-        // Read the JSON data from the test file
+        // Read the Metadata data from the test file
         let jsonFilePath = Bundle(for: type(of: self)).path(forResource: self.contextWithComplexMetadata, ofType: "json")
         let dataFromJSONFile = NSData(contentsOfFile: jsonFilePath!)!
         

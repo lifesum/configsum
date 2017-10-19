@@ -15,13 +15,13 @@ public enum Platform: String, Codable {
 public struct User: Codable {
     private let age: Int?
     
-    init(age: Int? = nil) {
+    public init(age: Int? = nil) {
         self.age = age
     }
 }
 
 public class Context: Codable {
-    private let metadata: JSON?
+    private let metadata: Metadata?
     private let app: App
     private let device: Device
     private let user: User
@@ -56,7 +56,7 @@ public class Context: Codable {
                 locale: String,
                 platform: Platform,
                 osVersion: String,
-                metadata: JSON?,
+                metadata: Metadata?,
                 user: User) {
         let secondsOffset = TimeZone.current.secondsFromGMT()
         let location = Location(locale: locale, timezoneOffset: secondsOffset)
@@ -73,7 +73,7 @@ public class Context: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.app = try container.decode(App.self, forKey: .app)
         self.device = try container.decode(Device.self, forKey: .device)
-        self.metadata = try container.decode(JSON.self, forKey: .metadata)
+        self.metadata = try container.decode(Metadata.self, forKey: .metadata)
         self.user = try container.decode(User.self, forKey: .user)
     }
     

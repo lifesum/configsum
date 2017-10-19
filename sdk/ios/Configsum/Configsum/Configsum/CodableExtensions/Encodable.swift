@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension JSON: Encodable {
+extension Metadata: Encodable {
     
     public func encode(to encoder: Encoder) throws {
         
