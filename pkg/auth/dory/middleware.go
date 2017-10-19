@@ -60,5 +60,10 @@ func hashSignature(secret, userID string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%x", h.Sum([]byte(userID))), nil
+	_, err = h.Write([]byte(userID))
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
