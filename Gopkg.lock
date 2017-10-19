@@ -59,7 +59,7 @@
   branch = "master"
   name = "github.com/lib/pq"
   packages = [".","oid"]
-  revision = "b77235e3890a962fe8a6f8c4c7198679ca7814e7"
+  revision = "017e4c14d80628353eaee677a1aeffe47a10c0dc"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -101,7 +101,7 @@
   branch = "master"
   name = "github.com/prometheus/procfs"
   packages = [".","xfs"]
-  revision = "e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2"
+  revision = "a6e9df898b1336106c743392c48ee0b71f5c4efa"
 
 [solve-meta]
   analyzer-name = "dep"
