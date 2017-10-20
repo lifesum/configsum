@@ -14,8 +14,11 @@ import (
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kitprom "github.com/go-kit/kit/metrics/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/lifesum/configsum/pkg/instrument"
 	"github.com/lifesum/configsum/pkg/pg"
 )
 
@@ -83,6 +86,18 @@ var revision = "0000000-dev"
 
 // Default vars.
 var defaultPostgresURI string
+
+var repoLabels = []string{
+	labelOp,
+	labelRepo,
+	labelStore,
+}
+
+var (
+	repoErrCount  *kitprom.Counter
+	repoOpCount   *kitprom.Counter
+	repoOpLatency *kitprom.Histogram
+)
 
 type runFunc func([]string, log.Logger) error
 
@@ -155,6 +170,74 @@ func abort(logger log.Logger, err error) {
 
 	_ = logger.Log(logError, err, logLifecycle, lifecycleAbort)
 	os.Exit(1)
+}
+
+func metricsRepo() (
+	instrument.CountRepoFunc,
+	instrument.CountRepoFunc,
+	instrument.ObserveRepoFunc,
+) {
+	if repoErrCount == nil {
+		repoErrCount = kitprom.NewCounterFrom(
+			prometheus.CounterOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "err_count",
+				Help:      "Amount of failed repo operations.",
+			},
+			repoLabels,
+		)
+	}
+
+	repoErrCountFunc := func(store, repo, op string) {
+		repoErrCount.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Add(1)
+	}
+
+	if repoOpCount == nil {
+		repoOpCount = kitprom.NewCounterFrom(
+			prometheus.CounterOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "op_count",
+				Help:      "Amount of successful repo operations.",
+			},
+			repoLabels,
+		)
+	}
+
+	repoOpCountFunc := func(store, repo, op string) {
+		repoOpCount.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Add(1)
+	}
+
+	if repoOpLatency == nil {
+		repoOpLatency = kitprom.NewHistogramFrom(
+			prometheus.HistogramOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "op_latency_seconds",
+				Help:      "Latency of successful repo operations.",
+			},
+			repoLabels,
+		)
+	}
+
+	repoOpLatencyFunc := func(store, repo, op string, begin time.Time) {
+		repoOpLatency.With(
+			labelOp, op,
+			labelRepo, repo,
+			labelStore, store,
+		).Observe(time.Since(begin).Seconds())
+	}
+
+	return repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc
 }
 
 func registerMetrics(mux *http.ServeMux) {
