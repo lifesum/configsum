@@ -3,7 +3,7 @@ package client
 import (
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 type inmemRepo struct {
@@ -20,7 +20,7 @@ func NewInmemRepo() Repo {
 func (r *inmemRepo) Lookup(id string) (Client, error) {
 	c, ok := r.clients[id]
 	if !ok {
-		return Client{}, errors.Wrap(ErrNotFound, "client lookup")
+		return Client{}, errors.Wrap(errors.ErrNotFound, "client lookup")
 	}
 
 	return c, nil
@@ -60,7 +60,7 @@ func NewInmemTokenRepo() TokenRepo {
 func (r *inmemTokenRepo) Lookup(secret string) (Token, error) {
 	t, ok := r.tokens[secret]
 	if !ok {
-		return Token{}, errors.Wrap(ErrNotFound, "token lookup")
+		return Token{}, errors.Wrap(errors.ErrNotFound, "token lookup")
 	}
 
 	return t, nil

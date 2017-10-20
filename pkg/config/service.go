@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
-	"github.com/pkg/errors"
+
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 // ServiceUser provides user specific configs.
@@ -38,7 +39,7 @@ func (s *serviceUser) Render(clientID, baseName, userID string) (UserConfig, err
 	uc, err := s.userRepo.GetLatest(bc.ID, userID)
 	if err != nil {
 		switch errors.Cause(err) {
-		case ErrNotFound:
+		case errors.ErrNotFound:
 			uc = UserConfig{}
 		default:
 			return UserConfig{}, errors.Wrap(err, "userRepo.GetLatest")

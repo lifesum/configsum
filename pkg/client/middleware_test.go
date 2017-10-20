@@ -4,8 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/pkg/errors"
-
+	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 )
 
@@ -50,7 +49,7 @@ func TestAuthMiddlewareSecretMissing(t *testing.T) {
 	ctx := context.TODO()
 
 	_, err := AuthMiddleware(svc)(nopEndpoint)(ctx, nil)
-	if have, want := errors.Cause(err), ErrSecretMissing; have != want {
+	if have, want := errors.Cause(err), errors.ErrSecretMissing; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

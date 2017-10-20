@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
-	"github.com/pkg/errors"
 
+	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 )
 
@@ -55,7 +55,7 @@ func testRepoLookupNotFound(t *testing.T, p prepareRepoFunc) {
 	)
 
 	_, err := repo.Lookup(id)
-	if have, want := errors.Cause(err), ErrNotFound; have != want {
+	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -110,7 +110,7 @@ func testTokenRepoLookupNotFound(t *testing.T, p prepareTokenRepoFunc) {
 	}
 
 	_, err = repo.Lookup(secret)
-	if have, want := errors.Cause(err), ErrNotFound; have != want {
+	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

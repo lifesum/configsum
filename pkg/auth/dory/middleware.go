@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/pkg/errors"
 
 	"github.com/lifesum/configsum/pkg/auth"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 type contextKey string
@@ -28,12 +28,12 @@ func AuthMiddleware(secret string) endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			signature, ok := ctx.Value(contextKeySignature).(string)
 			if !ok {
-				return nil, errors.Wrap(ErrSignatureMissing, "request context")
+				return nil, errors.Wrap(errors.ErrSignatureMissing, "request context")
 			}
 
 			userID, ok := ctx.Value(contextKeyUserID).(string)
 			if !ok {
-				return nil, errors.Wrap(ErrUserIDMissing, "request context")
+				return nil, errors.Wrap(errors.ErrUserIDMissing, "request context")
 			}
 
 			s, err := hashSignature(secret, userID)
@@ -42,7 +42,7 @@ func AuthMiddleware(secret string) endpoint.Middleware {
 			}
 
 			if s != signature {
-				return nil, errors.Wrap(ErrSignatureMissmatch, "auth")
+				return nil, errors.Wrap(errors.ErrSignatureMissmatch, "auth")
 			}
 
 			ctx = context.WithValue(ctx, auth.ContextKeyUserID, userID)

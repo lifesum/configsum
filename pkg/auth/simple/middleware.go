@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/pkg/errors"
 
 	"github.com/lifesum/configsum/pkg/auth"
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 type contextKey string
@@ -23,7 +23,7 @@ func AuthMiddleware() endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (interface{}, error) {
 			userID, ok := ctx.Value(contextKeyUserID).(string)
 			if !ok {
-				return nil, errors.Wrap(ErrUserIDMissing, "request context")
+				return nil, errors.Wrap(errors.ErrUserIDMissing, "request context")
 			}
 
 			ctx = context.WithValue(ctx, auth.ContextKeyUserID, userID)
