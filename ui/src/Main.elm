@@ -4,7 +4,7 @@ import Html exposing (Html, div, footer, h1, text)
 import Html.Attributes exposing (class)
 import Navigation
 import Action exposing (Msg(..))
-import Page.Apps as Apps
+import Page.Clients as Clients
 import Page.Blank as Blank
 import Route exposing (Route, navigate)
 import Views.Page as Page
@@ -38,8 +38,8 @@ type alias Model =
 
 
 type Page
-    = Apps
-    | Blank String
+    = Blank String
+    | Clients
     | NotFound
 
 
@@ -82,7 +82,7 @@ update msg model =
                 route =
                     case maybeRoute of
                         Nothing ->
-                            Route.Apps
+                            Route.Clients
 
                         Just route ->
                             route
@@ -102,16 +102,16 @@ setRoute maybeRoute model =
         Nothing ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just (Route.Apps) ->
-            ( { model | pageState = Loaded Apps }, Cmd.none )
+        Just Route.Clients ->
+            ( { model | pageState = Loaded Clients }, Cmd.none )
 
-        Just (Route.Configs) ->
+        Just Route.Configs ->
             ( { model | pageState = Loaded (Blank "Configs") }, Cmd.none )
 
-        Just (Route.NotFound) ->
+        Just Route.NotFound ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just (Route.Rules) ->
+        Just Route.Rules ->
             ( { model | pageState = Loaded (Blank "Rules") }, Cmd.none )
 
 
@@ -145,8 +145,8 @@ viewPage isLoading page route =
             Page.frame isLoading route
     in
         case page of
-            Apps ->
-                Apps.view
+            Clients ->
+                Clients.view
                     |> frame
 
             Blank name ->

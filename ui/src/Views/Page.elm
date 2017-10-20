@@ -27,7 +27,7 @@ viewHeader route =
             ]
         , nav []
             [ ul []
-                [ navLink route Route.Apps [ text "apps" ]
+                [ navLink route Route.Clients [ text "clients" ]
                 , navLink route Route.Configs [ text "configs" ]
                 , navLink route Route.Rules [ text "rules" ]
                 ]

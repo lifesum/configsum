@@ -60,7 +60,7 @@ func TestServiceUserRender(t *testing.T) {
 
 func TestServiceUserRenderConfigMissingBaseConfig(t *testing.T) {
 	var (
-		appID       = randString(characterSet)
+		clientID    = randString(characterSet)
 		baseName    = randString(characterSet)
 		baseRepo, _ = NewInmemBaseRepo(nil)
 		userID      = randString(characterSet)
@@ -68,7 +68,7 @@ func TestServiceUserRenderConfigMissingBaseConfig(t *testing.T) {
 		svc         = NewServiceUser(baseRepo, userRepo)
 	)
 
-	_, err := svc.Render(appID, baseName, userID)
+	_, err := svc.Render(clientID, baseName, userID)
 	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}

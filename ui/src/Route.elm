@@ -7,7 +7,7 @@ import UrlParser exposing (Parser, map, oneOf, parsePath, s)
 
 
 type Route
-    = Apps
+    = Clients
     | Configs
     | NotFound
     | Rules
@@ -16,8 +16,8 @@ type Route
 routes : Parser (Route -> a) a
 routes =
     oneOf
-        [ map Apps (s "")
-        , map Apps (s "apps")
+        [ map Clients (s "")
+        , map Clients (s "clients")
         , map Configs (s "configs")
         , map Rules (s "rules")
         ]
@@ -28,8 +28,8 @@ routeToString route =
     let
         pieces =
             case route of
-                Apps ->
-                    [ "apps" ]
+                Clients ->
+                    [ "clients" ]
 
                 Configs ->
                     [ "configs" ]

@@ -25,13 +25,13 @@ func NewInmemBaseRepo(initial InmemBaseState) (BaseRepo, error) {
 	}, nil
 }
 
-func (s *inmemBaseRepo) Get(appID, name string) (BaseConfig, error) {
-	app, ok := s.configs[appID]
+func (s *inmemBaseRepo) Get(clientID, name string) (BaseConfig, error) {
+	client, ok := s.configs[clientID]
 	if !ok {
-		return BaseConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("app id '%s'", appID))
+		return BaseConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("client id '%s'", clientID))
 	}
 
-	bc, ok := app[name]
+	bc, ok := client[name]
 	if !ok {
 		return BaseConfig{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("base config name '%s'", name))
 	}
