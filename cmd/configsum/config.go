@@ -11,11 +11,9 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/lifesum/configsum/pkg/auth/dory"
 	"github.com/lifesum/configsum/pkg/auth/simple"
@@ -63,65 +61,7 @@ func runConfig(args []string, logger log.Logger) error {
 		abort(logger, http.ListenAndServe(addr, mux))
 	}(logger, *intrumentAddr)
 
-	repoLabels := []string{
-		labelOp,
-		labelRepo,
-		labelStore,
-	}
-
-	repoErrCount := kitprom.NewCounterFrom(
-		prometheus.CounterOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "err_count",
-			Help:      "Amount of failed repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoErrCountFunc := func(store, repo, op string) {
-		repoErrCount.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Add(1)
-	}
-
-	repoOpCount := kitprom.NewCounterFrom(
-		prometheus.CounterOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "op_count",
-			Help:      "Amount of successful repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoOpCountFunc := func(store, repo, op string) {
-		repoOpCount.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Add(1)
-	}
-
-	repoOpLatency := kitprom.NewHistogramFrom(
-		prometheus.HistogramOpts{
-			Namespace: instrumentNamespace,
-			Subsystem: instrumentSubsystem,
-			Name:      "op_latency_seconds",
-			Help:      "Latency of successful repo operations.",
-		},
-		repoLabels,
-	)
-
-	repoOpLatencyFunc := func(store, repo, op string, begin time.Time) {
-		repoOpLatency.With(
-			labelOp, op,
-			labelRepo, repo,
-			labelStore, store,
-		).Observe(time.Since(begin).Seconds())
-	}
+	repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc := metricsRepo()
 
 	logger = log.With(logger, logService, serviceAPI)
 

@@ -2,17 +2,16 @@ package config
 
 import (
 	"time"
+
+	"github.com/lifesum/configsum/pkg/instrument"
 )
 
 const labelRepoUser = "user"
 
-type countFunc func(store, repo, op string)
-type observeFunc func(store, repo, op string, begin time.Time)
-
 type instrumentUserRepo struct {
-	errCount  countFunc
-	opCount   countFunc
-	opObserve observeFunc
+	errCount  instrument.CountRepoFunc
+	opCount   instrument.CountRepoFunc
+	opObserve instrument.ObserveRepoFunc
 	next      UserRepo
 	store     string
 }
@@ -20,9 +19,9 @@ type instrumentUserRepo struct {
 // NewUserRepoInstrumentMiddleware wraps the next UserRepo Prometheus
 // instrumentation capabilities.
 func NewUserRepoInstrumentMiddleware(
-	errCount countFunc,
-	opCount countFunc,
-	opObserve observeFunc,
+	errCount instrument.CountRepoFunc,
+	opCount instrument.CountRepoFunc,
+	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) UserRepoMiddleware {
 	return func(next UserRepo) UserRepo {

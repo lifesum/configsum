@@ -1,19 +1,20 @@
 package client
 
-import "time"
+import (
+	"time"
+
+	"github.com/lifesum/configsum/pkg/instrument"
+)
 
 const (
 	labelRepo      = "client"
 	labelRepoToken = "token"
 )
 
-type countFunc func(store, repo, op string)
-type observeFunc func(store, repo, op string, begin time.Time)
-
 type instrumentRepo struct {
-	errCount  countFunc
-	opCount   countFunc
-	opObserve observeFunc
+	errCount  instrument.CountRepoFunc
+	opCount   instrument.CountRepoFunc
+	opObserve instrument.ObserveRepoFunc
 	next      Repo
 	store     string
 }
@@ -21,9 +22,9 @@ type instrumentRepo struct {
 // NewRepoInstrumentMiddleware wraps the next Repo with Prometheus
 // instrumenation capabilities.
 func NewRepoInstrumentMiddleware(
-	errCount countFunc,
-	opCount countFunc,
-	opObserve observeFunc,
+	errCount instrument.CountRepoFunc,
+	opCount instrument.CountRepoFunc,
+	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) RepoMiddleware {
 	return func(next Repo) Repo {
@@ -79,9 +80,9 @@ func (r *instrumentRepo) track(begin time.Time, err error, op string) {
 }
 
 type instrumentTokenRepo struct {
-	errCount  countFunc
-	opCount   countFunc
-	opObserve observeFunc
+	errCount  instrument.CountRepoFunc
+	opCount   instrument.CountRepoFunc
+	opObserve instrument.ObserveRepoFunc
 	next      TokenRepo
 	store     string
 }
@@ -89,9 +90,9 @@ type instrumentTokenRepo struct {
 // NewTokenRepoInstrumentMiddleware wraps the next TokenRepo with Prometheus
 // instrumenation capabilities.
 func NewTokenRepoInstrumentMiddleware(
-	errCount countFunc,
-	opCount countFunc,
-	opObserve observeFunc,
+	errCount instrument.CountRepoFunc,
+	opCount instrument.CountRepoFunc,
+	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) TokenRepoMiddleware {
 	return func(next TokenRepo) TokenRepo {
