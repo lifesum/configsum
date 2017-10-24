@@ -5,14 +5,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/lifesum/configsum/pkg/errors"
+)
+
+type contextKey string
+
+const (
+	ctxKeyTimeBegin contextKey = "begin"
+	ctxKeyRoute     contextKey = "route"
+)
+
+// Field names for metric labels.
+const (
+	labelComponent = "component"
+	labelRoute     = "route"
+	labelStatus    = "status"
+)
+
+var (
+	namespace        = "configsum"
+	subsystemRequest = "request"
+	requestLabels    = []string{
+		labelComponent,
+		labelRoute,
+		labelStatus,
+	}
 )
 
 // Headers.
@@ -38,6 +65,8 @@ func MakeHandler(
 	opts = append(
 		opts,
 		kithttp.ServerBefore(kithttp.PopulateRequestContext),
+		kithttp.ServerBefore(addBeginTime),
+		kithttp.ServerBefore(addRoute),
 		kithttp.ServerErrorEncoder(encodeError),
 		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
 		kithttp.ServerFinalizer(serverFinalizer(log.With(logger, "route", "configUser"))),
@@ -102,9 +131,28 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
+func addBeginTime(ctx context.Context, r *http.Request) context.Context {
+	return context.WithValue(ctx, ctxKeyTimeBegin, time.Now())
+}
+
+func addRoute(ctx context.Context, r *http.Request) context.Context {
+	route := "unknown"
+
+	if current := mux.CurrentRoute(r); current != nil {
+		route = current.GetName()
+	}
+
+	return context.WithValue(ctx, ctxKeyRoute, route)
+}
+
 func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
+		var (
+			timeBegin = time.Since(ctx.Value(ctxKeyTimeBegin).(time.Time)).Seconds()
+		)
+
 		_ = logger.Log(
+			"duration", timeBegin,
 			"request", map[string]interface{}{
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
@@ -124,5 +172,21 @@ func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 				"statusCode": code,
 			},
 		)
+
+		requestLatency := kitprom.NewHistogramFrom(
+			prometheus.HistogramOpts{
+				Namespace: namespace,
+				Subsystem: subsystemRequest,
+				Name:      "req_latency_seconds",
+				Help:      "Total duration of requests in seconds",
+			},
+			requestLabels,
+		)
+
+		requestLatency.With(
+			labelComponent, "request",
+			labelRoute, ctx.Value(ctxKeyRoute).(string),
+			labelStatus, strconv.Itoa(code),
+		).Observe(timeBegin)
 	}
 }
