@@ -148,7 +148,9 @@ func addRoute(ctx context.Context, r *http.Request) context.Context {
 func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
 		var (
-			timeBegin = time.Since(ctx.Value(ctxKeyTimeBegin).(time.Time)).Seconds()
+			timeBegin  = time.Since(ctx.Value(ctxKeyTimeBegin).(time.Time)).Seconds()
+			route      = ctx.Value(ctxKeyRoute).(string)
+			statusCode = strconv.Itoa(code)
 		)
 
 		_ = logger.Log(
@@ -185,8 +187,22 @@ func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 
 		requestLatency.With(
 			labelComponent, "request",
-			labelRoute, ctx.Value(ctxKeyRoute).(string),
-			labelStatus, strconv.Itoa(code),
+			labelRoute, route,
+			labelStatus, statusCode,
 		).Observe(timeBegin)
+
+		requestCount := kitprom.NewCounterFrom(
+			prometheus.CounterOpts{
+				Namespace: namespace,
+				Subsystem: subsystemRequest,
+				Name:      "req_count",
+				Help:      "Number of requests received",
+			}, requestLabels)
+
+		requestCount.With(
+			labelComponent, "request",
+			labelRoute, route,
+			labelStatus, statusCode,
+		).Add(1)
 	}
 }
