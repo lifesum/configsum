@@ -10,10 +10,9 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	kitprom "github.com/go-kit/kit/metrics/prometheus"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/lifesum/configsum/pkg/instrument"
 
 	"github.com/lifesum/configsum/pkg/errors"
 )
@@ -25,21 +24,8 @@ const (
 	ctxKeyRoute     contextKey = "route"
 )
 
-// Field names for metric labels.
 const (
-	labelComponent = "component"
-	labelRoute     = "route"
-	labelStatus    = "status"
-)
-
-var (
-	namespace        = "configsum"
-	subsystemRequest = "request"
-	requestLabels    = []string{
-		labelComponent,
-		labelRoute,
-		labelStatus,
-	}
+	host = "transport_http"
 )
 
 // Headers.
@@ -57,6 +43,8 @@ func MakeHandler(
 	logger log.Logger,
 	svc ServiceUser,
 	auth endpoint.Middleware,
+	reqCount instrument.CountRequestFunc,
+	reqObserve instrument.ObserveRequestFunc,
 	opts ...kithttp.ServerOption,
 ) http.Handler {
 	r := mux.NewRouter()
@@ -65,11 +53,13 @@ func MakeHandler(
 	opts = append(
 		opts,
 		kithttp.ServerBefore(kithttp.PopulateRequestContext),
-		kithttp.ServerBefore(addBeginTime),
-		kithttp.ServerBefore(addRoute),
+		kithttp.ServerBefore(populateRequestContext),
 		kithttp.ServerErrorEncoder(encodeError),
 		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
-		kithttp.ServerFinalizer(serverFinalizer(log.With(logger, "route", "configUser"))),
+		kithttp.ServerFinalizer(serverFinalizer(
+			log.With(logger, "route", "configUser"),
+			reqCount,
+			reqObserve)),
 	)
 
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
@@ -82,6 +72,19 @@ func MakeHandler(
 	)
 
 	return r
+}
+
+func populateRequestContext(ctx context.Context, r *http.Request) context.Context {
+	route := "unknown"
+
+	if current := mux.CurrentRoute(r); current != nil {
+		route = current.GetName()
+	}
+
+	ctx = context.WithValue(ctx, ctxKeyTimeBegin, time.Now())
+	ctx = context.WithValue(ctx, ctxKeyRoute, route)
+
+	return ctx
 }
 
 func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -131,25 +134,14 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
-func addBeginTime(ctx context.Context, r *http.Request) context.Context {
-	return context.WithValue(ctx, ctxKeyTimeBegin, time.Now())
-}
-
-func addRoute(ctx context.Context, r *http.Request) context.Context {
-	route := "unknown"
-
-	if current := mux.CurrentRoute(r); current != nil {
-		route = current.GetName()
-	}
-
-	return context.WithValue(ctx, ctxKeyRoute, route)
-}
-
-func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
+func serverFinalizer(logger log.Logger,
+	reqCount instrument.CountRequestFunc,
+	reqObserve instrument.ObserveRequestFunc,
+) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
 		var (
-			timeBegin  = time.Since(ctx.Value(ctxKeyTimeBegin).(time.Time)).Seconds()
-			route      = ctx.Value(ctxKeyRoute).(string)
+			timeBegin  = ctx.Value(ctxKeyTimeBegin).(time.Time)
+			method     = ctx.Value(ctxKeyRoute).(string)
 			statusCode = strconv.Itoa(code)
 		)
 
@@ -175,34 +167,7 @@ func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 			},
 		)
 
-		requestLatency := kitprom.NewHistogramFrom(
-			prometheus.HistogramOpts{
-				Namespace: namespace,
-				Subsystem: subsystemRequest,
-				Name:      "req_latency_seconds",
-				Help:      "Total duration of requests in seconds",
-			},
-			requestLabels,
-		)
-
-		requestLatency.With(
-			labelComponent, "request",
-			labelRoute, route,
-			labelStatus, statusCode,
-		).Observe(timeBegin)
-
-		requestCount := kitprom.NewCounterFrom(
-			prometheus.CounterOpts{
-				Namespace: namespace,
-				Subsystem: subsystemRequest,
-				Name:      "req_count",
-				Help:      "Number of requests received",
-			}, requestLabels)
-
-		requestCount.With(
-			labelComponent, "request",
-			labelRoute, route,
-			labelStatus, statusCode,
-		).Add(1)
+		reqCount(host, method, statusCode)
+		reqObserve(host, method, statusCode, timeBegin)
 	}
 }

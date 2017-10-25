@@ -44,9 +44,12 @@ const (
 
 // Instrument labels.
 const (
-	labelOp    = "op"
-	labelRepo  = "repo"
-	labelStore = "store"
+	labelOp     = "op"
+	labelRepo   = "repo"
+	labelStore  = "store"
+	labelHost   = "host"
+	labelMethod = "method"
+	labelProto  = "proto"
 )
 
 // Instrument fields.
@@ -93,10 +96,19 @@ var repoLabels = []string{
 	labelStore,
 }
 
+var requestLabels = []string{
+	labelHost,
+	labelMethod,
+	labelProto,
+}
+
 var (
 	repoErrCount  *kitprom.Counter
 	repoOpCount   *kitprom.Counter
 	repoOpLatency *kitprom.Histogram
+
+	requestCount   *kitprom.Counter
+	requestLatency *kitprom.Histogram
 )
 
 type runFunc func([]string, log.Logger) error
@@ -238,6 +250,50 @@ func metricsRepo() (
 	}
 
 	return repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc
+}
+
+func metricsRequest() (
+	instrument.CountRequestFunc,
+	instrument.ObserveRequestFunc,
+) {
+	if requestLatency == nil {
+		requestLatency = kitprom.NewHistogramFrom(
+			prometheus.HistogramOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "req_latency_seconds",
+				Help:      "Total duration of requests in seconds",
+			}, requestLabels,
+		)
+	}
+
+	requestLatencyFunc := func(host, method, statusCode string, begin time.Time) {
+		requestLatency.With(
+			labelHost, host,
+			labelMethod, method,
+			labelProto, statusCode,
+		).Observe(time.Since(begin).Seconds())
+	}
+
+	if requestCount == nil {
+		requestCount = kitprom.NewCounterFrom(
+			prometheus.CounterOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "req_count",
+				Help:      "Number of requests received",
+			}, requestLabels)
+	}
+
+	requestCountFunc := func(host, method, statusCode string) {
+		requestCount.With(
+			labelHost, host,
+			labelMethod, method,
+			labelProto, statusCode,
+		).Add(1)
+	}
+
+	return requestCountFunc, requestLatencyFunc
 }
 
 func registerMetrics(mux *http.ServeMux) {
