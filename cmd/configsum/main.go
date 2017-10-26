@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -44,9 +45,13 @@ const (
 
 // Instrument labels.
 const (
-	labelOp    = "op"
-	labelRepo  = "repo"
-	labelStore = "store"
+	labelOp         = "op"
+	labelRepo       = "repo"
+	labelStore      = "store"
+	labelHost       = "host"
+	labelMethod     = "method"
+	labelProto      = "proto"
+	labelStatusCode = "statusCode"
 )
 
 // Instrument fields.
@@ -93,10 +98,20 @@ var repoLabels = []string{
 	labelStore,
 }
 
+var requestLabels = []string{
+	labelStatusCode,
+	labelHost,
+	labelMethod,
+	labelProto,
+}
+
 var (
 	repoErrCount  *kitprom.Counter
 	repoOpCount   *kitprom.Counter
 	repoOpLatency *kitprom.Histogram
+
+	requestCount   *kitprom.Counter
+	requestLatency *kitprom.Histogram
 )
 
 type runFunc func([]string, log.Logger) error
@@ -238,6 +253,52 @@ func metricsRepo() (
 	}
 
 	return repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc
+}
+
+func metricsRequest() (
+	instrument.CountRequestFunc,
+	instrument.ObserveRequestFunc,
+) {
+	if requestLatency == nil {
+		requestLatency = kitprom.NewHistogramFrom(
+			prometheus.HistogramOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "transport_http_latency_seconds",
+				Help:      "Total duration of requests in seconds",
+			}, requestLabels,
+		)
+	}
+
+	requestLatencyFunc := func(statusCode int, host, method, proto string, begin time.Time) {
+		requestLatency.With(
+			labelStatusCode, strconv.Itoa(statusCode),
+			labelHost, host,
+			labelMethod, method,
+			labelProto, proto,
+		).Observe(time.Since(begin).Seconds())
+	}
+
+	if requestCount == nil {
+		requestCount = kitprom.NewCounterFrom(
+			prometheus.CounterOpts{
+				Namespace: instrumentNamespace,
+				Subsystem: instrumentSubsystem,
+				Name:      "transport_http_count",
+				Help:      "Number of requests received",
+			}, requestLabels)
+	}
+
+	requestCountFunc := func(statusCode int, host, method, proto string) {
+		requestCount.With(
+			labelStatusCode, strconv.Itoa(statusCode),
+			labelHost, host,
+			labelMethod, method,
+			labelProto, proto,
+		).Add(1)
+	}
+
+	return requestCountFunc, requestLatencyFunc
 }
 
 func registerMetrics(mux *http.ServeMux) {

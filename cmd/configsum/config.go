@@ -62,6 +62,7 @@ func runConfig(args []string, logger log.Logger) error {
 	}(logger, *intrumentAddr)
 
 	repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc := metricsRepo()
+	requestCount, requestLatency := metricsRequest()
 
 	logger = log.With(logger, logService, serviceAPI)
 
@@ -170,7 +171,14 @@ func runConfig(args []string, logger log.Logger) error {
 		fmt.Sprintf(`%s/`, prefixConfig),
 		http.StripPrefix(
 			prefixConfig,
-			config.MakeHandler(logger, svc, auth, opts...),
+			config.MakeHandler(
+				logger,
+				svc,
+				auth,
+				requestCount,
+				requestLatency,
+				opts...,
+			),
 		),
 	)
 

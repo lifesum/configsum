@@ -13,6 +13,14 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/instrument"
+)
+
+type contextKey string
+
+const (
+	ctxKeyTimeBegin contextKey = "begin"
+	ctxKeyRoute     contextKey = "route"
 )
 
 // Headers.
@@ -30,6 +38,8 @@ func MakeHandler(
 	logger log.Logger,
 	svc ServiceUser,
 	auth endpoint.Middleware,
+	reqCount instrument.CountRequestFunc,
+	reqObserve instrument.ObserveRequestFunc,
 	opts ...kithttp.ServerOption,
 ) http.Handler {
 	r := mux.NewRouter()
@@ -38,9 +48,16 @@ func MakeHandler(
 	opts = append(
 		opts,
 		kithttp.ServerBefore(kithttp.PopulateRequestContext),
+		kithttp.ServerBefore(populateRequestContext),
 		kithttp.ServerErrorEncoder(encodeError),
 		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
-		kithttp.ServerFinalizer(serverFinalizer(log.With(logger, "route", "configUser"))),
+		kithttp.ServerFinalizer(
+			serverFinalizer(
+				log.With(logger, "route", "configUser"),
+				reqCount,
+				reqObserve,
+			),
+		),
 	)
 
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
@@ -53,6 +70,19 @@ func MakeHandler(
 	)
 
 	return r
+}
+
+func populateRequestContext(ctx context.Context, r *http.Request) context.Context {
+	route := "unknown"
+
+	if current := mux.CurrentRoute(r); current != nil {
+		route = current.GetName()
+	}
+
+	ctx = context.WithValue(ctx, ctxKeyTimeBegin, time.Now())
+	ctx = context.WithValue(ctx, ctxKeyRoute, route)
+
+	return ctx
 }
 
 func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -102,16 +132,28 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
-func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
+func serverFinalizer(
+	logger log.Logger,
+	reqCount instrument.CountRequestFunc,
+	reqObserve instrument.ObserveRequestFunc,
+) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
+		var (
+			timeBegin = ctx.Value(ctxKeyTimeBegin).(time.Time)
+			method    = ctx.Value(ctxKeyRoute).(string)
+			host      = ctx.Value(kithttp.ContextKeyRequestHost)
+			proto     = ctx.Value(kithttp.ContextKeyRequestProto)
+		)
+
 		_ = logger.Log(
+			"duration", timeBegin,
 			"request", map[string]interface{}{
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
-				"host":             ctx.Value(kithttp.ContextKeyRequestHost),
+				"host":             host,
 				"method":           ctx.Value(kithttp.ContextKeyRequestMethod),
 				"path":             ctx.Value(kithttp.ContextKeyRequestPath),
-				"proto":            ctx.Value(kithttp.ContextKeyRequestProto),
+				"proto":            proto,
 				"referer":          ctx.Value(kithttp.ContextKeyRequestReferer),
 				"remoteAddr":       ctx.Value(kithttp.ContextKeyRequestRemoteAddr),
 				"requestId":        ctx.Value(kithttp.ContextKeyRequestXRequestID),
@@ -124,5 +166,8 @@ func serverFinalizer(logger log.Logger) kithttp.ServerFinalizerFunc {
 				"statusCode": code,
 			},
 		)
+
+		reqCount(code, host.(string), method, proto.(string))
+		reqObserve(code, host.(string), method, proto.(string), timeBegin)
 	}
 }
