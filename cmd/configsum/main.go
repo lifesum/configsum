@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 	"time"
@@ -44,12 +45,13 @@ const (
 
 // Instrument labels.
 const (
-	labelOp     = "op"
-	labelRepo   = "repo"
-	labelStore  = "store"
-	labelHost   = "host"
-	labelMethod = "method"
-	labelProto  = "proto"
+	labelOp         = "op"
+	labelRepo       = "repo"
+	labelStore      = "store"
+	labelHost       = "host"
+	labelMethod     = "method"
+	labelProto      = "proto"
+	labelStatusCode = "statusCode"
 )
 
 // Instrument fields.
@@ -97,6 +99,7 @@ var repoLabels = []string{
 }
 
 var requestLabels = []string{
+	labelStatusCode,
 	labelHost,
 	labelMethod,
 	labelProto,
@@ -261,17 +264,18 @@ func metricsRequest() (
 			prometheus.HistogramOpts{
 				Namespace: instrumentNamespace,
 				Subsystem: instrumentSubsystem,
-				Name:      "req_latency_seconds",
+				Name:      "transport_http_latency_seconds",
 				Help:      "Total duration of requests in seconds",
 			}, requestLabels,
 		)
 	}
 
-	requestLatencyFunc := func(host, method, statusCode string, begin time.Time) {
+	requestLatencyFunc := func(statusCode int, host, method, proto string, begin time.Time) {
 		requestLatency.With(
+			labelStatusCode, strconv.Itoa(statusCode),
 			labelHost, host,
 			labelMethod, method,
-			labelProto, statusCode,
+			labelProto, proto,
 		).Observe(time.Since(begin).Seconds())
 	}
 
@@ -280,16 +284,17 @@ func metricsRequest() (
 			prometheus.CounterOpts{
 				Namespace: instrumentNamespace,
 				Subsystem: instrumentSubsystem,
-				Name:      "req_count",
+				Name:      "transport_http_count",
 				Help:      "Number of requests received",
 			}, requestLabels)
 	}
 
-	requestCountFunc := func(host, method, statusCode string) {
+	requestCountFunc := func(statusCode int, host, method, proto string) {
 		requestCount.With(
+			labelStatusCode, strconv.Itoa(statusCode),
 			labelHost, host,
 			labelMethod, method,
-			labelProto, statusCode,
+			labelProto, proto,
 		).Add(1)
 	}
 

@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/lifesum/configsum/pkg/instrument"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/instrument"
 )
 
 type contextKey string
@@ -22,10 +21,6 @@ type contextKey string
 const (
 	ctxKeyTimeBegin contextKey = "begin"
 	ctxKeyRoute     contextKey = "route"
-)
-
-const (
-	host = "transport_http"
 )
 
 // Headers.
@@ -56,10 +51,13 @@ func MakeHandler(
 		kithttp.ServerBefore(populateRequestContext),
 		kithttp.ServerErrorEncoder(encodeError),
 		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
-		kithttp.ServerFinalizer(serverFinalizer(
-			log.With(logger, "route", "configUser"),
-			reqCount,
-			reqObserve)),
+		kithttp.ServerFinalizer(
+			serverFinalizer(
+				log.With(logger, "route", "configUser"),
+				reqCount,
+				reqObserve,
+			),
+		),
 	)
 
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
@@ -134,15 +132,17 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	})
 }
 
-func serverFinalizer(logger log.Logger,
+func serverFinalizer(
+	logger log.Logger,
 	reqCount instrument.CountRequestFunc,
 	reqObserve instrument.ObserveRequestFunc,
 ) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
 		var (
-			timeBegin  = ctx.Value(ctxKeyTimeBegin).(time.Time)
-			method     = ctx.Value(ctxKeyRoute).(string)
-			statusCode = strconv.Itoa(code)
+			timeBegin = ctx.Value(ctxKeyTimeBegin).(time.Time)
+			method    = ctx.Value(ctxKeyRoute).(string)
+			host      = ctx.Value(kithttp.ContextKeyRequestHost)
+			proto     = ctx.Value(kithttp.ContextKeyRequestProto)
 		)
 
 		_ = logger.Log(
@@ -150,10 +150,10 @@ func serverFinalizer(logger log.Logger,
 			"request", map[string]interface{}{
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
-				"host":             ctx.Value(kithttp.ContextKeyRequestHost),
+				"host":             host,
 				"method":           ctx.Value(kithttp.ContextKeyRequestMethod),
 				"path":             ctx.Value(kithttp.ContextKeyRequestPath),
-				"proto":            ctx.Value(kithttp.ContextKeyRequestProto),
+				"proto":            proto,
 				"referer":          ctx.Value(kithttp.ContextKeyRequestReferer),
 				"remoteAddr":       ctx.Value(kithttp.ContextKeyRequestRemoteAddr),
 				"requestId":        ctx.Value(kithttp.ContextKeyRequestXRequestID),
@@ -167,7 +167,7 @@ func serverFinalizer(logger log.Logger,
 			},
 		)
 
-		reqCount(host, method, statusCode)
-		reqObserve(host, method, statusCode, timeBegin)
+		reqCount(code, host.(string), method, proto.(string))
+		reqObserve(code, host.(string), method, proto.(string), timeBegin)
 	}
 }

@@ -171,12 +171,14 @@ func runConfig(args []string, logger log.Logger) error {
 		fmt.Sprintf(`%s/`, prefixConfig),
 		http.StripPrefix(
 			prefixConfig,
-			config.MakeHandler(logger,
+			config.MakeHandler(
+				logger,
 				svc,
 				auth,
 				requestCount,
 				requestLatency,
-				opts...),
+				opts...,
+			),
 		),
 	)
 

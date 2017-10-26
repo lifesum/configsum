@@ -9,7 +9,7 @@ type CountRepoFunc func(store, repo, op string)
 type ObserveRepoFunc func(store, repo, op string, begin time.Time)
 
 // CountRequestFunc wraps a counter to track number of received requests.
-type CountRequestFunc func(host, method, statusCode string)
+type CountRequestFunc func(statusCode int, host, method, proto string)
 
 // ObserveRequestFunc wraps a histogram to track request latencies.
-type ObserveRequestFunc func(host, method, statusCode string, begin time.Time)
+type ObserveRequestFunc func(statusCode int, host, method, proto string, begin time.Time)
