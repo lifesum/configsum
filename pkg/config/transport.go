@@ -146,7 +146,7 @@ func serverFinalizer(
 		)
 
 		_ = logger.Log(
-			"duration", timeBegin,
+			"duration", time.Since(timeBegin).Nanoseconds(),
 			"request", map[string]interface{}{
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
