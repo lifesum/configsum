@@ -19,6 +19,7 @@ import (
 	"github.com/lifesum/configsum/pkg/auth/simple"
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
+	"github.com/lifesum/configsum/pkg/instrument"
 )
 
 const (
@@ -60,9 +61,6 @@ func runConfig(args []string, logger log.Logger) error {
 
 		abort(logger, http.ListenAndServe(addr, mux))
 	}(logger, *intrumentAddr)
-
-	repoErrCountFunc, repoOpCountFunc, repoOpLatencyFunc := metricsRepo()
-	requestCount, requestLatency := metricsRequest()
 
 	logger = log.With(logger, logService, serviceAPI)
 
@@ -117,27 +115,21 @@ func runConfig(args []string, logger log.Logger) error {
 		return err
 	}
 	userRepo = config.NewUserRepoInstrumentMiddleware(
-		repoErrCountFunc,
-		repoOpCountFunc,
-		repoOpLatencyFunc,
+		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
 	)(userRepo)
 	userRepo = config.NewUserRepoLogMiddleware(logger, storeRepo)(userRepo)
 
 	clientRepo := client.NewPostgresRepo(db)
 	clientRepo = client.NewRepoInstrumentMiddleware(
-		repoErrCountFunc,
-		repoOpCountFunc,
-		repoOpLatencyFunc,
+		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
 	)(clientRepo)
 	clientRepo = client.NewRepoLogMiddleware(logger, storeRepo)(clientRepo)
 
 	tokenRepo := client.NewPostgresTokenRepo(db)
 	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
-		repoErrCountFunc,
-		repoOpCountFunc,
-		repoOpLatencyFunc,
+		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
 	)(tokenRepo)
 	tokenRepo = client.NewTokenRepoLogMiddleware(logger, storeRepo)(tokenRepo)
@@ -173,10 +165,9 @@ func runConfig(args []string, logger log.Logger) error {
 			prefixConfig,
 			config.MakeHandler(
 				logger,
+				instrument.ObserveRequest(instrumentNamespace, taskConfig),
 				svc,
 				auth,
-				requestCount,
-				requestLatency,
 				opts...,
 			),
 		),

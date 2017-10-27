@@ -12,8 +12,6 @@ const (
 )
 
 type instrumentRepo struct {
-	errCount  instrument.CountRepoFunc
-	opCount   instrument.CountRepoFunc
 	opObserve instrument.ObserveRepoFunc
 	next      Repo
 	store     string
@@ -22,16 +20,12 @@ type instrumentRepo struct {
 // NewRepoInstrumentMiddleware wraps the next Repo with Prometheus
 // instrumenation capabilities.
 func NewRepoInstrumentMiddleware(
-	errCount instrument.CountRepoFunc,
-	opCount instrument.CountRepoFunc,
 	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) RepoMiddleware {
 	return func(next Repo) Repo {
 		return &instrumentRepo{
-			errCount:  errCount,
 			next:      next,
-			opCount:   opCount,
 			opObserve: opObserve,
 			store:     store,
 		}
@@ -40,7 +34,7 @@ func NewRepoInstrumentMiddleware(
 
 func (r *instrumentRepo) Lookup(id string) (client Client, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Lookup")
+		r.opObserve(r.store, labelRepo, "Lookup", begin, err)
 	}(time.Now())
 
 	return r.next.Lookup(id)
@@ -48,7 +42,7 @@ func (r *instrumentRepo) Lookup(id string) (client Client, err error) {
 
 func (r *instrumentRepo) Store(id, name string) (client Client, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Store")
+		r.opObserve(r.store, labelRepo, "Store", begin, err)
 	}(time.Now())
 
 	return r.next.Store(id, name)
@@ -56,7 +50,7 @@ func (r *instrumentRepo) Store(id, name string) (client Client, err error) {
 
 func (r *instrumentRepo) setup() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "setup")
+		r.opObserve(r.store, labelRepo, "setup", begin, err)
 	}(time.Now())
 
 	return r.next.setup()
@@ -64,24 +58,13 @@ func (r *instrumentRepo) setup() (err error) {
 
 func (r *instrumentRepo) teardown() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "teardown")
+		r.opObserve(r.store, labelRepo, "teardown", begin, err)
 	}(time.Now())
 
 	return r.next.teardown()
 }
 
-func (r *instrumentRepo) track(begin time.Time, err error, op string) {
-	if err != nil {
-		r.errCount(r.store, labelRepo, op)
-	}
-
-	r.opCount(r.store, labelRepo, op)
-	r.opObserve(r.store, labelRepo, op, begin)
-}
-
 type instrumentTokenRepo struct {
-	errCount  instrument.CountRepoFunc
-	opCount   instrument.CountRepoFunc
 	opObserve instrument.ObserveRepoFunc
 	next      TokenRepo
 	store     string
@@ -90,16 +73,12 @@ type instrumentTokenRepo struct {
 // NewTokenRepoInstrumentMiddleware wraps the next TokenRepo with Prometheus
 // instrumenation capabilities.
 func NewTokenRepoInstrumentMiddleware(
-	errCount instrument.CountRepoFunc,
-	opCount instrument.CountRepoFunc,
 	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) TokenRepoMiddleware {
 	return func(next TokenRepo) TokenRepo {
 		return &instrumentTokenRepo{
-			errCount:  errCount,
 			next:      next,
-			opCount:   opCount,
 			opObserve: opObserve,
 			store:     store,
 		}
@@ -108,7 +87,7 @@ func NewTokenRepoInstrumentMiddleware(
 
 func (r *instrumentTokenRepo) Lookup(secret string) (token Token, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Lookup")
+		r.opObserve(r.store, labelRepoToken, "Lookup", begin, err)
 	}(time.Now())
 
 	return r.next.Lookup(secret)
@@ -116,7 +95,7 @@ func (r *instrumentTokenRepo) Lookup(secret string) (token Token, err error) {
 
 func (r *instrumentTokenRepo) Store(clientID, secret string) (token Token, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Store")
+		r.opObserve(r.store, labelRepoToken, "Store", begin, err)
 	}(time.Now())
 
 	return r.next.Store(clientID, secret)
@@ -124,7 +103,7 @@ func (r *instrumentTokenRepo) Store(clientID, secret string) (token Token, err e
 
 func (r *instrumentTokenRepo) setup() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "setup")
+		r.opObserve(r.store, labelRepoToken, "setup", begin, err)
 	}(time.Now())
 
 	return r.next.setup()
@@ -132,17 +111,12 @@ func (r *instrumentTokenRepo) setup() (err error) {
 
 func (r *instrumentTokenRepo) teardown() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "teardown")
+		r.opObserve(r.store, labelRepoToken, "teardown", begin, err)
 	}(time.Now())
 
 	return r.next.teardown()
 }
 
 func (r *instrumentTokenRepo) track(begin time.Time, err error, op string) {
-	if err != nil {
-		r.errCount(r.store, labelRepoToken, op)
-	}
-
-	r.opCount(r.store, labelRepoToken, op)
-	r.opObserve(r.store, labelRepoToken, op, begin)
+	r.opObserve(r.store, labelRepoToken, op, begin, err)
 }
