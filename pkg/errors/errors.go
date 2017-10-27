@@ -19,6 +19,11 @@ var (
 	ErrUserIDMissing      = errors.New("userID missing")
 )
 
+// Transport errors.
+var (
+	ErrInvalidPayload = errors.New("payload invalid")
+)
+
 // Cause is a wraper over github.com/pkg/errors.Cause.
 func Cause(err error) error {
 	return errors.Cause(err)

@@ -1,9 +1,11 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/lifesum/configsum/pkg/errors"
 )
@@ -46,13 +49,47 @@ func MakeHandler(
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
 		kithttp.NewServer(
 			auth(userEndpoint(svc)),
-			decodeUserRequest,
+			decodeJSONSchema(decodeUserRequest, decodeClientPayloadSchema),
 			encodeUserResponse,
 			opts...,
 		),
 	)
 
 	return r
+}
+
+func decodeJSONSchema(
+	next kithttp.DecodeRequestFunc,
+	schema *gojsonschema.Schema,
+) kithttp.DecodeRequestFunc {
+	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+		raw, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(raw) == 0 {
+			return nil, errors.Wrap(errors.ErrInvalidPayload, "empty body")
+		}
+		res, err := schema.Validate(gojsonschema.NewBytesLoader(raw))
+		if nil != err {
+			return nil, errors.Wrap(errors.ErrInvalidPayload, err.Error())
+		}
+
+		if !res.Valid() {
+			err := errors.ErrInvalidPayload
+
+			for _, e := range res.Errors() {
+				err = errors.Wrap(err, e.String())
+			}
+
+			return nil, err
+		}
+
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(raw))
+
+		return next(ctx, r)
+	}
 }
 
 func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
