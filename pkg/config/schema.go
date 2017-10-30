@@ -2,8 +2,6 @@ package config
 
 import "github.com/xeipuuv/gojsonschema"
 
-var decodeClientPayloadSchema *gojsonschema.Schema
-
 const requestCapabilities = `
 {
 	  "$schema": "http://json-schema.org/draft-06/schema#",
@@ -94,6 +92,8 @@ const requestCapabilities = `
 	  },
 	  "required": ["app", "device"]
 }`
+
+var decodeClientPayloadSchema *gojsonschema.Schema
 
 func init() {
 	var err error
