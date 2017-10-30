@@ -47,6 +47,12 @@ const (
 			created_at DESC
 		LIMIT
 			1`
+
+	pgUserIndexGetLatest = `
+		CREATE INDEX
+			users_get_latest
+		ON
+			config.users(base_id, user_id, created_at DESC)`
 )
 
 type pgUserRepo struct {
@@ -167,6 +173,7 @@ func (r *pgUserRepo) Setup() error {
 	for _, q := range []string{
 		pgUserCreateSchema,
 		pgUserCreateTable,
+		pgUserIndexGetLatest,
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
