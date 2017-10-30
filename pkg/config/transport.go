@@ -36,10 +36,9 @@ const (
 // MakeHandler returns an http.Handler for the config service.
 func MakeHandler(
 	logger log.Logger,
+	reqObserve instrument.ObserveRequestFunc,
 	svc ServiceUser,
 	auth endpoint.Middleware,
-	reqCount instrument.CountRequestFunc,
-	reqObserve instrument.ObserveRequestFunc,
 	opts ...kithttp.ServerOption,
 ) http.Handler {
 	r := mux.NewRouter()
@@ -54,7 +53,6 @@ func MakeHandler(
 		kithttp.ServerFinalizer(
 			serverFinalizer(
 				log.With(logger, "route", "configUser"),
-				reqCount,
 				reqObserve,
 			),
 		),
@@ -134,19 +132,18 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 func serverFinalizer(
 	logger log.Logger,
-	reqCount instrument.CountRequestFunc,
 	reqObserve instrument.ObserveRequestFunc,
 ) kithttp.ServerFinalizerFunc {
 	return func(ctx context.Context, code int, r *http.Request) {
 		var (
-			timeBegin = ctx.Value(ctxKeyTimeBegin).(time.Time)
-			method    = ctx.Value(ctxKeyRoute).(string)
-			host      = ctx.Value(kithttp.ContextKeyRequestHost)
-			proto     = ctx.Value(kithttp.ContextKeyRequestProto)
+			begin  = ctx.Value(ctxKeyTimeBegin).(time.Time)
+			method = ctx.Value(ctxKeyRoute).(string)
+			host   = ctx.Value(kithttp.ContextKeyRequestHost).(string)
+			proto  = ctx.Value(kithttp.ContextKeyRequestProto).(string)
 		)
 
 		_ = logger.Log(
-			"duration", time.Since(timeBegin).Nanoseconds(),
+			"duration", time.Since(begin).Nanoseconds(),
 			"request", map[string]interface{}{
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
@@ -167,7 +164,6 @@ func serverFinalizer(
 			},
 		)
 
-		reqCount(code, host.(string), method, proto.(string))
-		reqObserve(code, host.(string), method, proto.(string), timeBegin)
+		reqObserve(code, host, method, proto, begin)
 	}
 }

@@ -9,8 +9,6 @@ import (
 const labelRepoUser = "user"
 
 type instrumentUserRepo struct {
-	errCount  instrument.CountRepoFunc
-	opCount   instrument.CountRepoFunc
 	opObserve instrument.ObserveRepoFunc
 	next      UserRepo
 	store     string
@@ -19,16 +17,12 @@ type instrumentUserRepo struct {
 // NewUserRepoInstrumentMiddleware wraps the next UserRepo Prometheus
 // instrumentation capabilities.
 func NewUserRepoInstrumentMiddleware(
-	errCount instrument.CountRepoFunc,
-	opCount instrument.CountRepoFunc,
 	opObserve instrument.ObserveRepoFunc,
 	store string,
 ) UserRepoMiddleware {
 	return func(next UserRepo) UserRepo {
 		return &instrumentUserRepo{
-			errCount:  errCount,
 			next:      next,
-			opCount:   opCount,
 			opObserve: opObserve,
 			store:     store,
 		}
@@ -41,7 +35,7 @@ func (r *instrumentUserRepo) Append(
 	render rendered,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Append")
+		r.opObserve(r.store, labelRepoUser, "Append", begin, err)
 	}(time.Now())
 
 	return r.next.Append(id, baseID, userID, decisions, render)
@@ -51,7 +45,7 @@ func (r *instrumentUserRepo) GetLatest(
 	baseID, userID string,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "GetLatest")
+		r.opObserve(r.store, labelRepoUser, "GetLatest", begin, err)
 	}(time.Now())
 
 	return r.next.GetLatest(baseID, userID)
@@ -59,7 +53,7 @@ func (r *instrumentUserRepo) GetLatest(
 
 func (r *instrumentUserRepo) Setup() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Setup")
+		r.opObserve(r.store, labelRepoUser, "Setup", begin, err)
 	}(time.Now())
 
 	return r.next.Setup()
@@ -67,19 +61,8 @@ func (r *instrumentUserRepo) Setup() (err error) {
 
 func (r *instrumentUserRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
-		r.track(begin, err, "Teardown")
+		r.opObserve(r.store, labelRepoUser, "Teardown", begin, err)
 	}(time.Now())
 
 	return r.next.Teardown()
-}
-
-func (r *instrumentUserRepo) track(begin time.Time, err error, op string) {
-	if err != nil {
-		r.errCount(r.store, labelRepoUser, op)
-
-		return
-	}
-
-	r.opCount(r.store, labelRepoUser, op)
-	r.opObserve(r.store, labelRepoUser, op, begin)
 }
