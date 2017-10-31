@@ -17,7 +17,7 @@ internal struct Router {
     let environment: Environment
     private var requestURL: URL? {
         var components = URLComponents()
-        components.scheme = "https"
+        components.scheme = environment.urlScheme
         components.host = environment.hostName
         components.port = environment.port
         components.path = "/\(environment.serviceVersion)/config/\(environment.baseConfigurationName)"

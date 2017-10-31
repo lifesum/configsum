@@ -33,4 +33,9 @@ internal struct Dispatcher {
                                      failure: failure)
         }
     }
+    
+    internal func retrieveRawConfig() -> [String: Any]? {
+        let resultHandler = ResultHandler<Any>(persistence: self.persistence)
+        return resultHandler.rawConfig()
+    }
 }
