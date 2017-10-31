@@ -18,7 +18,7 @@
         },
         "location" : {
             "locale" : "en-US",
-            "timezoneOffset" : 7200
+            "timezoneOffset" : 3600
         }
     },
     "user" : {

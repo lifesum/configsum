@@ -59,4 +59,8 @@ internal struct ResultHandler<T> {
             failure?(error)
         }
     }
+    
+    internal func rawConfig() -> [String: Any]? {
+        return self.persistence.get()
+    }
 }

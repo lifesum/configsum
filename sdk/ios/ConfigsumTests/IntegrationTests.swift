@@ -14,10 +14,12 @@ class IntegrationTests: XCTestCase {
     override func setUp() {
         super.setUp()
         let environment = Environment(log: true,
-                                      token: "KX_PunWe37Xba0X0iHf1xJMjlfi4bcU2Xqq1rAX-qOM=",
-                                      headers: ["X-Configsum-Userid": ["testSequence"]],
+                                      token: "xCXbGXeG14GQjAPNfUKouaPJjRk68h5RAGia4wzyC1A=",
+                                      headers: ["X-Configsum-Userid": ["123"]],
                                       baseConfigurationName: "houston",
-                                      hostName: "config.svc.test3.playground.lifesum.com")
+                                      hostName: "localhost",
+                                      port: 8700,
+                                      urlScheme: "http")
         self.configsum = Configsum(environment: environment)
         self.attributes = Context(appVersion: "8.6.7",
                                      locale: "en_GB",
@@ -110,6 +112,19 @@ class IntegrationTests: XCTestCase {
         }, failure: { error in
             XCTFail("http call failed with error: \(error)")
         })
+        waitForExpectations(timeout: 10.0, handler: nil)
+    }
+    
+    func testGetRawConfig() {
+        let exp = expectation(description: "testGetRawConfig")
+        self.configsum.render(attributes: self.attributes,
+                              success: {
+            let rawConfig = self.configsum.getRawConfig()
+            XCTAssertNotNil(rawConfig)
+            exp.fulfill()
+        }) { error in
+            XCTFail("http call failed with error: \(error)")
+        }
         waitForExpectations(timeout: 10.0, handler: nil)
     }
 }

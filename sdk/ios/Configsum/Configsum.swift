@@ -95,4 +95,11 @@ public struct Configsum {
                                       success: success,
                                       failure: failure)
     }
+    
+    /// Returns the entire stored config
+    ///
+    /// - Returns: the config in the form for a key-value data structure
+    public func getRawConfig() -> [String: Any]? {
+        return dispatcher.retrieveRawConfig()
+    }
 }

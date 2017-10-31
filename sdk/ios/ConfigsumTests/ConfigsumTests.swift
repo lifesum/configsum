@@ -55,4 +55,9 @@ class ConfigsumTests: XCTestCase {
                                                    defaultValue: false)
         XCTAssertFalse(boolValue)
     }
+    
+    func testGetRawConfig() {
+        let rawConfig = self.configsum.getRawConfig()
+        XCTAssertNotNil(rawConfig)
+    }
 }
