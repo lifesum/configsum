@@ -24,10 +24,13 @@ setup-dev:
 	psql -d template1 -tc "SELECT 1 FROM pg_database WHERE datname = 'configsum_dev'" | grep -q 1 || psql -d template1 -c "CREATE DATABASE configsum_dev"
 	psql -d template1 -tc "SELECT 1 FROM pg_database WHERE datname = 'configsum_test'" | grep -q 1 || psql -d template1 -c "CREATE DATABASE configsum_test"
 
+dependencies: $(GOBIN)/dep
+	$(GOBIN)/dep ensure
+
 check: check-dependencies
 
 check-dependencies: $(GOBIN)/dep
-	$(GOBIN)/dep ensure
+	$(GOBIN)/dep status
 
 test: test-integration
 
