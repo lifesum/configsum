@@ -59,11 +59,7 @@ public class Context: Codable {
                 user: User?) {
         let secondsOffset = TimeZone.current.secondsFromGMT()
         
-        let languageCode = locale.languageCode!
-        let regionCode = locale.regionCode!
-        let formattedLocale = languageCode + "_" + regionCode
-        
-        let location = Location(locale: formattedLocale, timezoneOffset: secondsOffset)
+        let location = Location(locale: locale.identifier, timezoneOffset: secondsOffset)
         let os = OS(platform: platform,
                     version: osVersion)
         self.app = App(version: appVersion)
