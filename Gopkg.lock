@@ -103,9 +103,27 @@
   packages = [".","xfs"]
   revision = "a6e9df898b1336106c743392c48ee0b71f5c4efa"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonpointer"
+  packages = ["."]
+  revision = "6fe8760cad3569743d51ddbb243b26f8456742dc"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonreference"
+  packages = ["."]
+  revision = "e02fc20de94c78484cd5ffb007f8af96be030a45"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/xeipuuv/gojsonschema"
+  packages = ["."]
+  revision = "212d8a0df7acfab8bdd190a7a69f0ab7376edcc8"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "871fbb9bda7525d635e13976dad87716375f36b16d9d457c09dd9b9394e74656"
+  inputs-digest = "6323c0520afa5b466f2dbbac1e9234535b0135f2bb747b58469b7e50e60140ca"
   solver-name = "gps-cdcl"
   solver-version = 1
