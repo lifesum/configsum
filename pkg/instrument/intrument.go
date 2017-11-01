@@ -19,6 +19,7 @@ const (
 	labelOp         = "op"
 	labelProto      = "proto"
 	labelRepo       = "repo"
+	labelRoute      = "route"
 	labelStatusCode = "statusCode"
 	labelStore      = "store"
 )
@@ -70,7 +71,11 @@ func ObserveRepo(namespace, subsystem string) ObserveRepoFunc {
 }
 
 // ObserveRequestFunc wraps a histogram to track request latencies.
-type ObserveRequestFunc func(code int, host, method, proto string, begin time.Time)
+type ObserveRequestFunc func(
+	code int,
+	host, method, proto, route string,
+	begin time.Time,
+)
 
 // ObserveRequest wraps a histogram to track request latencies.
 func ObserveRequest(namespace, subsystem string) ObserveRequestFunc {
@@ -94,12 +99,13 @@ func ObserveRequest(namespace, subsystem string) ObserveRequestFunc {
 		)
 	}
 
-	return func(code int, host, method, proto string, begin time.Time) {
+	return func(code int, host, method, proto, route string, begin time.Time) {
 		requestLatencies[key].With(
 			labelStatusCode, strconv.Itoa(code),
 			labelHost, host,
 			labelMethod, method,
 			labelProto, proto,
+			labelRoute, route,
 		).Observe(time.Since(begin).Seconds())
 	}
 }

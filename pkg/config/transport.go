@@ -137,9 +137,10 @@ func serverFinalizer(
 	return func(ctx context.Context, code int, r *http.Request) {
 		var (
 			begin  = ctx.Value(ctxKeyTimeBegin).(time.Time)
-			method = ctx.Value(ctxKeyRoute).(string)
+			method = ctx.Value(kithttp.ContextKeyRequestMethod).(string)
 			host   = ctx.Value(kithttp.ContextKeyRequestHost).(string)
 			proto  = ctx.Value(kithttp.ContextKeyRequestProto).(string)
+			route  = ctx.Value(ctxKeyRoute).(string)
 		)
 
 		_ = logger.Log(
@@ -148,7 +149,7 @@ func serverFinalizer(
 				"authorization":    ctx.Value(kithttp.ContextKeyRequestAuthorization),
 				"header":           r.Header,
 				"host":             host,
-				"method":           ctx.Value(kithttp.ContextKeyRequestMethod),
+				"method":           method,
 				"path":             ctx.Value(kithttp.ContextKeyRequestPath),
 				"proto":            proto,
 				"referer":          ctx.Value(kithttp.ContextKeyRequestReferer),
@@ -162,8 +163,9 @@ func serverFinalizer(
 				"size":       ctx.Value(kithttp.ContextKeyResponseSize).(int64),
 				"statusCode": code,
 			},
+			"route", route,
 		)
 
-		reqObserve(code, host, method, proto, begin)
+		reqObserve(code, host, method, proto, route, begin)
 	}
 }
