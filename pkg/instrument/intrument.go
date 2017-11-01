@@ -95,6 +95,7 @@ func ObserveRequest(namespace, subsystem string) ObserveRequestFunc {
 				labelMethod,
 				labelProto,
 				labelStatusCode,
+				labelRoute,
 			},
 		)
 	}
