@@ -22,8 +22,8 @@ class IntegrationTests: XCTestCase {
                                       urlScheme: "http")
         self.configsum = Configsum(environment: environment)
         self.attributes = Context(appVersion: "8.6.7",
-                                     locale: "en_GB",
-                                     platform: .android,
+                                     locale: Locale.current,
+                                     platform: .watchOS,
                                      osVersion: "8.0",
                                      metadata: nil,
                                      user: User(age: 20))

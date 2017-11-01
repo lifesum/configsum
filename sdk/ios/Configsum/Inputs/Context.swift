@@ -7,9 +7,8 @@
 import Foundation
 
 public enum Platform: String, Codable {
-    case android
     case iOS
-    case watchOS
+    case watchOS = "WatchOS"
 }
 
 public struct User: Codable {
@@ -24,7 +23,7 @@ public class Context: Codable {
     private let metadata: Metadata?
     private let app: App
     private let device: Device
-    private let user: User
+    private let user: User?
     
     enum CodingKeys: String, CodingKey {
         case app
@@ -53,13 +52,14 @@ public class Context: Codable {
     }
     
     public init(appVersion: String,
-                locale: String,
+                locale: Locale,
                 platform: Platform,
                 osVersion: String,
                 metadata: Metadata?,
-                user: User) {
+                user: User?) {
         let secondsOffset = TimeZone.current.secondsFromGMT()
-        let location = Location(locale: locale, timezoneOffset: secondsOffset)
+        
+        let location = Location(locale: locale.identifier, timezoneOffset: secondsOffset)
         let os = OS(platform: platform,
                     version: osVersion)
         self.app = App(version: appVersion)
@@ -73,15 +73,15 @@ public class Context: Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.app = try container.decode(App.self, forKey: .app)
         self.device = try container.decode(Device.self, forKey: .device)
-        self.metadata = try container.decode(Metadata.self, forKey: .metadata)
-        self.user = try container.decode(User.self, forKey: .user)
+        self.metadata = try container.decodeIfPresent(Metadata.self, forKey: .metadata)
+        self.user = try container.decodeIfPresent(User.self, forKey: .user)
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(app, forKey: .app)
         try container.encode(device, forKey: .device)
-        try container.encode(metadata, forKey: .metadata)
-        try container.encode(user, forKey: .user)
+        try container.encodeIfPresent(metadata, forKey: .metadata)
+        try container.encodeIfPresent(user, forKey: .user)
     }
 }

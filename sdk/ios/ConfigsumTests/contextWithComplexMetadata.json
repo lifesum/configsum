@@ -17,7 +17,7 @@
             "version" : "11.0"
         },
         "location" : {
-            "locale" : "en-US",
+            "locale" : "en_US",
             "timezoneOffset" : 3600
         }
     },

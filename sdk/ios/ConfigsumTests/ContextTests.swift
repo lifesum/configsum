@@ -37,7 +37,7 @@ class ContextTests: XCTestCase {
                                                 from: dataFromJSONFile as Data)
         
         let context = Context(appVersion: "8.6.0",
-                              locale: "en-US",
+                              locale: Locale.current,
                               platform: .iOS,
                               osVersion: "11.0",
                               metadata: nil,
@@ -58,7 +58,7 @@ class ContextTests: XCTestCase {
                                                 from: dataFromJSONFile as Data)
         
         let context = Context(appVersion: "8.6.0",
-                              locale: "en-US",
+                              locale: Locale.current,
                               platform: .iOS,
                               osVersion: "11.0",
                               metadata: ["name": "testName",
@@ -80,7 +80,7 @@ class ContextTests: XCTestCase {
                                                 from: dataFromJSONFile as Data)
         
         let context = Context(appVersion: "8.6.0",
-                              locale: "en-US",
+                              locale: Locale.current,
                               platform: .iOS,
                               osVersion: "11.0",
                               metadata: ["name": "testName",
