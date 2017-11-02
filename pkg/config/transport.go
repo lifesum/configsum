@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -36,6 +35,13 @@ const (
 	headerCreatedAt   = "X-Configsum-Created"
 )
 
+// URL fragments.
+const (
+	varBaseConfig muxVar = "baseConfig"
+)
+
+type muxVar string
+
 // MakeHandler returns an http.Handler for the config service.
 func MakeHandler(
 	logger log.Logger,
@@ -47,26 +53,25 @@ func MakeHandler(
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	opts = append(
-		opts,
-		kithttp.ServerBefore(kithttp.PopulateRequestContext),
-		kithttp.ServerBefore(populateRequestContext),
-		kithttp.ServerErrorEncoder(encodeError),
-		kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
-		kithttp.ServerFinalizer(
-			serverFinalizer(
-				log.With(logger, "route", "configUser"),
-				reqObserve,
-			),
-		),
-	)
-
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
 		kithttp.NewServer(
 			auth(userEndpoint(svc)),
 			decodeJSONSchema(decodeUserRequest, decodeClientPayloadSchema),
 			encodeUserResponse,
-			opts...,
+			append(
+				opts,
+				kithttp.ServerBefore(kithttp.PopulateRequestContext),
+				kithttp.ServerBefore(populateRequestContext),
+				kithttp.ServerBefore(extractMuxVars(varBaseConfig)),
+				kithttp.ServerErrorEncoder(encodeError),
+				kithttp.ServerErrorLogger(log.With(logger, "route", "configUser")),
+				kithttp.ServerFinalizer(
+					serverFinalizer(
+						log.With(logger, "route", "configUser"),
+						reqObserve,
+					),
+				),
+			)...,
 		),
 	)
 
@@ -120,13 +125,35 @@ func decodeJSONSchema(
 	}
 }
 
+func extractMuxVars(keys ...muxVar) kithttp.RequestFunc {
+	return func(ctx context.Context, r *http.Request) context.Context {
+		for _, k := range keys {
+			if v, ok := mux.Vars(r)[string(k)]; ok {
+				ctx = context.WithValue(ctx, k, v)
+			}
+		}
+
+		return ctx
+	}
+}
+
 func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	c, ok := mux.Vars(r)["baseConfig"]
+	baseConfig, ok := ctx.Value(varBaseConfig).(string)
 	if !ok {
-		return nil, fmt.Errorf("Baseconfig missing")
+		return nil, errors.Wrap(errors.ErrVarMissing, "baseConfig missing")
 	}
 
-	return userRequest{baseConfig: c}, nil
+	c := userContext{}
+
+	err := json.NewDecoder(r.Body).Decode(&c)
+	if err != nil {
+		return nil, err
+	}
+
+	return userRequest{
+		baseConfig: baseConfig,
+		context:    c,
+	}, nil
 }
 
 func encodeUserResponse(

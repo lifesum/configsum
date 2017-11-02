@@ -22,6 +22,7 @@ var (
 // Transport errors.
 var (
 	ErrInvalidPayload = errors.New("payload invalid")
+	ErrVarMissing     = errors.New("variable missing")
 )
 
 // Cause is a wraper over github.com/pkg/errors.Cause.
@@ -32,4 +33,9 @@ func Cause(err error) error {
 // Wrap is a wrapper over github.com/pkg/errors.Wrap.
 func Wrap(err error, message string) error {
 	return errors.Wrap(err, message)
+}
+
+// Wrapf is a wrapper over github.com/pkg/errors.Wrapf.
+func Wrapf(err error, format string, args ...interface{}) error {
+	return errors.Wrapf(err, format, args...)
 }

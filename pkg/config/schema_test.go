@@ -9,20 +9,21 @@ import (
 var (
 	schema            = gojsonschema.NewStringLoader(requestCapabilities)
 	testFailingInputs = []string{
-		`{}`,                                                                                                                                                                   // App missing
-		`{"app": {}}`,                                                                                                                                                          // Empty App object
-		`{"app": {"version": "6.4.1"}}`,                                                                                                                                        // Device missing
-		`{"app": {"version": "6.4.1"}, "device": {}, "os": {"platform": "WatchOS", "version": "9.4"}}`,                                                                         // Empty Device object
-		`{"app": {"version": "6.4.1"}, "device": {"location": {}, "os": {"platform": "WatchOS", "version": "9.4"}}}`,                                                           // Empty Location object
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB"}, "os": {"platform": "WatchOS", "version": "9.4"}}}`,                                          // TimezoneOffset missing
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}}}`,                                                                   // OS missing
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}, "os": {}}}`,                                                         // Empty Os object
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}, "os": {"platform": "WatchOS"}}}`,                                    // Version missing
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "testLocale", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}}`,             // Wrong locale format
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "testLocale", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {}}`, // Empty User object
+		`{}`,                                                                                                                                // App missing
+		`{"app": {}}`,                                                                                                                       // Empty App object
+		`{"app": {"version": "6.4.1"}}`,                                                                                                     // Device missing
+		`{"app": {"version": "6.4.1"}, "device": {}, "os": {"platform": "WatchOS", "version": "9.4"}}`,                                      // Empty Device object
+		`{"app": {"version": "6.4.1"}, "device": {"location": {}, "os": {"platform": "WatchOS", "version": "9.4"}}}`,                        // Empty Location object
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB"}, "os": {"platform": "WatchOS", "version": "9.4"}}}`,       // TimezoneOffset missing
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}}}`,                                // OS missing
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}, "os": {}}}`,                      // Empty Os object
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7200}, "os": {"platform": "WatchOS"}}}`, // Version missing
 	}
 	testSuccessInputs = []string{
-		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {"age": 23}}`, // Working case
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {"age": 23}}`,                   // Working case
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {}}`,                            // User age optional
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en", "timezoneOffset": 7201}, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {"age": 27}}`,                      // Only region provided
+		`{"app": {"version": "6.4.1"}, "device": {"location": {"locale": "en_GB", "timezoneOffset": 7201}, "metadata": null, "os": {"platform": "WatchOS", "version": "9.4"}}, "user": {"age": 23}}`, // Metadata value is null
 	}
 )
 
