@@ -22,7 +22,7 @@ const requestCapabilities = `
       ]
     },
     "metadata": {
-      "type": "object",
+      "type": [ "null", "object" ],
       "additionalProperties": {
         "anyOf": [
           {
@@ -50,7 +50,7 @@ const requestCapabilities = `
       "type": "object",
       "properties": {
         "location": {
-          "type": [ "null", "object" ],
+          "type": "object",
           "properties": {
             "locale": {
               "description": "The device's locale setting according to ISO 639-3 and/or BCP 47.",
