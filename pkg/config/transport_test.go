@@ -3,13 +3,18 @@ package config
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
+	"github.com/gorilla/mux"
 	"github.com/xeipuuv/gojsonschema"
+	"golang.org/x/text/language"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 )
 
 const (
@@ -92,4 +97,56 @@ func TestDecodeJSONSchemaMissingField(t *testing.T) {
 	if want := errors.ErrInvalidPayload; errors.Cause(have) != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
+}
+
+func TestDecodeUserRequest(t *testing.T) {
+	var (
+		baseConfig = generate.RandomString(6)
+		ctx        = context.WithValue(context.Background(), varBaseConfig, baseConfig)
+		locale     = language.MustParse("en_GB")
+		payload    = bytes.NewBufferString(`{"device": {"location": {"locale": "en_GB"}}}`)
+		target     = fmt.Sprintf("/%s", baseConfig)
+		r          = httptest.NewRequest("PUT", target, payload)
+	)
+
+	raw, err := decodeUserRequest(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := userRequest{
+		baseConfig: baseConfig,
+		context: userContext{
+			Device: device{
+				Location: location{
+					locale: locale,
+				},
+			},
+		},
+	}
+
+	if have := raw.(userRequest); !reflect.DeepEqual(have, want) {
+		t.Errorf("\nhave %#v\nwant %#v", have, want)
+	}
+}
+
+func TestExtractMuxVars(t *testing.T) {
+	var (
+		key = muxVar("testKey")
+		val = generate.RandomString(12)
+	)
+
+	r := mux.NewRouter()
+
+	r.Methods("GET").Path(`/root/{testKey}`).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := extractMuxVars(key)(context.Background(), r)
+
+		if have, want := ctx.Value(key), val; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	})
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/root/%s", val), nil)
+
+	r.ServeHTTP(httptest.NewRecorder(), req)
 }
