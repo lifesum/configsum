@@ -20,6 +20,7 @@ import (
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
 	"github.com/lifesum/configsum/pkg/instrument"
+	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 )
 
 const (
@@ -140,9 +141,19 @@ func runConfig(args []string, logger log.Logger) error {
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
 		clientSVC    = client.NewService(clientRepo, tokenRepo)
 		svc          = config.NewServiceUser(baseRepo, userRepo)
+		opts         = []kithttp.ServerOption{
+			kithttp.ServerBefore(kithttp.PopulateRequestContext),
+			kithttp.ServerBefore(confhttp.PopulateRequestContext),
+			kithttp.ServerErrorEncoder(confhttp.ErrorEncoder),
+			kithttp.ServerFinalizer(
+				confhttp.ServerFinalizer(
+					logger,
+					instrument.ObserveRequest(instrumentNamespace, taskConfig),
+				),
+			),
+		}
 
 		auth endpoint.Middleware
-		opts []kithttp.ServerOption
 	)
 
 	auth = endpoint.Chain(client.AuthMiddleware(clientSVC))
@@ -164,8 +175,6 @@ func runConfig(args []string, logger log.Logger) error {
 		http.StripPrefix(
 			prefixConfig,
 			config.MakeHandler(
-				logger,
-				instrument.ObserveRequest(instrumentNamespace, taskConfig),
 				svc,
 				auth,
 				opts...,

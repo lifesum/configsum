@@ -26,13 +26,8 @@ const tmplIndex = `<!DOCTYPE html>
 </html>`
 
 // MakeHandler returns am http.Handler for the UI.
-func MakeHandler(logger log.Logger, base string, local bool) (http.Handler, error) {
+func MakeHandler(logger log.Logger, base string, local bool) http.Handler {
 	r := mux.NewRouter()
-
-	tplRoot, err := template.New("root").Parse(tmplIndex)
-	if err != nil {
-		return nil, err
-	}
 
 	r.Methods("GET").PathPrefix("/scripts").Name("scripts").Handler(
 		http.FileServer(_escFS(local)),
@@ -41,6 +36,8 @@ func MakeHandler(logger log.Logger, base string, local bool) (http.Handler, erro
 	r.Methods("GET").PathPrefix("/styles").Name("styles").Handler(
 		http.FileServer(_escFS(local)),
 	)
+
+	tplRoot := template.Must(template.New("root").Parse(tmplIndex))
 
 	r.Methods("GET").PathPrefix("/").Name("root").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
@@ -52,5 +49,5 @@ func MakeHandler(logger log.Logger, base string, local bool) (http.Handler, erro
 		},
 	)
 
-	return r, nil
+	return r
 }

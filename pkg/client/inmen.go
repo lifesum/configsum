@@ -17,6 +17,20 @@ func NewInmemRepo() Repo {
 	}
 }
 
+func (r *inmemRepo) List() (List, error) {
+	cs := List{}
+
+	for _, c := range r.clients {
+		if c.deleted {
+			continue
+		}
+
+		cs = append(cs, c)
+	}
+
+	return cs, nil
+}
+
 func (r *inmemRepo) Lookup(id string) (Client, error) {
 	c, ok := r.clients[id]
 	if !ok {
@@ -55,6 +69,16 @@ func NewInmemTokenRepo() TokenRepo {
 	return &inmemTokenRepo{
 		tokens: map[string]Token{},
 	}
+}
+
+func (r *inmemTokenRepo) GetLatest(clientID string) (Token, error) {
+	for _, t := range r.tokens {
+		if t.clientID == clientID {
+			return t, nil
+		}
+	}
+
+	return Token{}, errors.Wrapf(errors.ErrNotFound, "no token for %s'", clientID)
 }
 
 func (r *inmemTokenRepo) Lookup(secret string) (Token, error) {

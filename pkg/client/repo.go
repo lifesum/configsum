@@ -11,10 +11,14 @@ type Client struct {
 	createdAt time.Time
 }
 
+// List is a collection of Clients.
+type List []Client
+
 // Repo for Client interactions.
 type Repo interface {
 	lifecycle
 
+	List() (List, error)
 	Lookup(id string) (Client, error)
 	Store(id, name string) (Client, error)
 }
@@ -26,6 +30,7 @@ type RepoMiddleware func(Repo) Repo
 type TokenRepo interface {
 	lifecycle
 
+	GetLatest(clientID string) (Token, error)
 	Lookup(secret string) (Token, error)
 	Store(clientID, secret string) (Token, error)
 }

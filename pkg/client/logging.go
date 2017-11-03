@@ -10,6 +10,7 @@ import (
 const (
 	logFieldClientID = "client_id"
 	logFieldDuration = "duration"
+	logFieldElements = "elements"
 	logFieldErr      = "err"
 	logFieldID       = "id"
 	logFieldOp       = "op"
@@ -36,6 +37,24 @@ func NewRepoLogMiddleware(logger log.Logger, store string) RepoMiddleware {
 			next: next,
 		}
 	}
+}
+
+func (r *logRepo) List() (cs List, err error) {
+	defer func(begin time.Time) {
+		ps := []interface{}{
+			logFieldDuration, time.Since(begin).Nanoseconds(),
+			logFieldElements, len(cs),
+			logFieldOp, "List",
+		}
+
+		if err != nil {
+			ps = append(ps, logFieldErr, err)
+		}
+
+		_ = r.logger.Log(ps...)
+	}(time.Now())
+
+	return r.next.List()
 }
 
 func (r *logRepo) Lookup(id string) (client Client, err error) {
@@ -125,6 +144,24 @@ func NewTokenRepoLogMiddleware(logger log.Logger, store string) TokenRepoMiddlew
 			next: next,
 		}
 	}
+}
+
+func (r *logTokenRepo) GetLatest(clientID string) (token Token, err error) {
+	defer func(begin time.Time) {
+		ps := []interface{}{
+			logFieldClientID, clientID,
+			logFieldDuration, time.Since(begin).Nanoseconds(),
+			logFieldOp, "GetLatest",
+		}
+
+		if err != nil {
+			ps = append(ps, logFieldErr, err)
+		}
+
+		_ = r.logger.Log(ps...)
+	}(time.Now())
+
+	return r.next.GetLatest(clientID)
 }
 
 func (r *logTokenRepo) Lookup(secret string) (token Token, err error) {

@@ -15,12 +15,24 @@ import (
 
 var pgURI string
 
+func TestPGRepoList(t *testing.T) {
+	testRepoList(t, preparePGRepo)
+}
+
+func TestPGRepoListEmpty(t *testing.T) {
+	testRepoListEmpty(t, preparePGRepo)
+}
+
 func TestPGRepoLookup(t *testing.T) {
 	testRepoLookup(t, preparePGRepo)
 }
 
 func TestPGRepoLookupNotFound(t *testing.T) {
 	testRepoLookupNotFound(t, preparePGRepo)
+}
+
+func TestPGTokenRepoGetLatest(t *testing.T) {
+	testTokenRepoGetLatest(t, preparePGTokenRepo)
 }
 
 func TestPGTokenRepoLookup(t *testing.T) {

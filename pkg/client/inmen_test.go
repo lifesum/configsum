@@ -2,12 +2,20 @@ package client
 
 import "testing"
 
+func TestInmemRepoList(t *testing.T) {
+	testRepoList(t, prepareInmemRepo)
+}
+
 func TestInmemRepoLookup(t *testing.T) {
 	testRepoLookup(t, prepareInmemRepo)
 }
 
 func TestInmemRepoLookupNotFound(t *testing.T) {
 	testRepoLookupNotFound(t, prepareInmemRepo)
+}
+
+func TestInmemTokenRepoGetLatest(t *testing.T) {
+	testTokenRepoGetLatest(t, prepareInmemTokenRepo)
 }
 
 func TestInmemTokenRepoLookup(t *testing.T) {
