@@ -28,7 +28,9 @@ const (
 		FROM
 			client.clients
 		WHERE
-			deleted = :deleted`
+			deleted = :deleted
+		ORDER BY
+			created_at DESC`
 	pgClientLookup = `
 		/* pgClientLookup */
 		SELECT

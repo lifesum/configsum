@@ -51,6 +51,7 @@ func HTTPToContext(
 
 	return context.WithValue(ctx, contextKeySecret, secret)
 }
+
 func decodeCreateRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	v := struct {
 		Name string `json:"name"`

@@ -28,7 +28,7 @@ a:hover {
 	color: rgba(255, 255, 255, 0.6);
 }
 
-a.active {
+a.active, a.action {
 	color: rgb(255, 82, 82);
 }
 
@@ -40,16 +40,48 @@ h1 {
 }
 
 div.debug {
+	background: rgb(34, 34, 34);
 	border-top: 0.1rem dashed rgba(255, 255, 255, 0.4);
 	color: rgb(155, 155, 155);
 	font-family: 'Roboto Mono', monospace;
 	font-size: 1.2rem;
+	line-height: 1.6em;
 	padding: 0.8rem;
 	text-align: center;
 }
 
+form {
+	font-size: 1.8rem;
+	padding: 1.2rem 0;
+}
+
+form button {
+	background: rgba(255, 255, 255, 0.6);
+	border: 0;
+	color: rgb(34, 34, 34);
+	cursor: pointer;
+	font-weight: 500;
+	margin: 0 1.6rem;
+	padding: 1rem 1.4rem;
+	text-transform: uppercase;
+	transition: all 0.15s ease;
+}
+
+form button:hover {
+	background: rgba(255, 255, 255, 0.8);
+}
+
+form input {
+	background: transparent;
+	border: 0.1rem solid rgba(255, 255, 255, 0.6);
+	color: rgba(255, 255, 255, 1);
+	outline: 0;
+	padding: 0.8rem 1.2rem;
+}
+
 header {
 	align-items: flex-start;
+	background: rgb(34, 34, 34);
 	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.4);
 	display: flex;
 	flex-direction: row;
@@ -108,6 +140,73 @@ footer {
 	width: 100%;
 }
 
-div.page {
+main.page {
+	padding-bottom: 20rem;
+}
+
+main.page > div {
 	margin: 0 6rem;
+}
+
+main.page div.error {
+	background: rgba(255, 82, 82, 1);
+	color: rgba(255, 255, 255, 1);
+	font-family: 'Roboto Mono', monospace;
+	font-size: 1.6rem;
+	line-height: 1.6em;
+	padding: 0.8rem;
+}
+
+main.clients div.create {
+	font-size: 1.6rem;
+	min-height: 8rem;
+}
+
+main.clients div.create a {
+	text-transform: uppercase;
+}
+
+main.clients div.create a.action span {
+	margin-right: 0.8rem;
+}
+
+main.errored div.error h2 {
+	font-size: 2rem;
+	margin: 2.4rem 0 3.2rem 0;
+}
+
+main.errored div.error div {
+	border: 0.1rem dashed rgba(255, 255, 255, 0.4);
+	color: rgba(255, 255, 255, 0.8);
+	font-family: 'Roboto Mono', monospace;
+	font-size: 1.6rem;
+	line-height: 1.6em;
+	padding: 0.8rem;
+}
+
+table {
+	border-collapse: collapse;
+	font-size: 1.6rem;
+	width: 100%;
+}
+
+table thead tr th {
+	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.6);
+	padding: 0 0 0.5em 0.8rem;
+	text-align: left;
+	text-transform: capitalize;
+}
+
+table tbody tr {
+	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.3);
+	transition: all 0.15s ease;
+}
+
+table tbody tr:hover {
+	background: rgba(255, 255, 255, 0.1);
+	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.1);
+}
+
+table tbody tr td {
+	padding: 2.4rem 1.2rem 1.2rem 0.8rem;
 }

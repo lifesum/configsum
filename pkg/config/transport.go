@@ -33,7 +33,7 @@ const (
 
 type muxVar string
 
-// MakeHandler returns an http.Handler for the config service.
+// MakeHandler returns an http.Handler for the user config service.
 func MakeHandler(
 	svc ServiceUser,
 	auth endpoint.Middleware,
