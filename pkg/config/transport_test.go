@@ -126,7 +126,7 @@ func TestDecodeUserRequest(t *testing.T) {
 	}
 
 	if have := raw.(userRequest); !reflect.DeepEqual(have, want) {
-		t.Errorf("\nhave %#v\nwant %#v", have, want)
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
 

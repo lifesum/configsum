@@ -2,12 +2,18 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/jmoiron/sqlx"
 
+	"github.com/lifesum/configsum/pkg/client"
+	"github.com/lifesum/configsum/pkg/instrument"
+	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 	"github.com/lifesum/configsum/pkg/ui"
 )
 
@@ -18,6 +24,7 @@ func runConsole(args []string, logger log.Logger) error {
 
 		instrumentAddr = flagset.String("instrument.addr", ":8711", "Listen address for instrumenation")
 		listenAddr     = flagset.String("listen.addr", ":8710", "HTTP API bind address")
+		postgresURI    = flagset.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
 		uiBase         = flagset.String("ui.base", "/", "Base URI to use for path based mounting")
 		uiLocal        = flagset.Bool("ui.local", false, "Load static assets from the filesystem")
 	)
@@ -43,14 +50,51 @@ func runConsole(args []string, logger log.Logger) error {
 		abort(logger, http.ListenAndServe(addr, mux))
 	}(logger, *instrumentAddr)
 
-	serveMux := http.NewServeMux()
-
-	handler, err := ui.MakeHandler(logger, *uiBase, *uiLocal)
+	db, err := sqlx.Connect(storeRepo, *postgresURI)
 	if err != nil {
-		abort(logger, err)
+		return err
 	}
 
-	serveMux.Handle("/", handler)
+	clientRepo := client.NewPostgresRepo(db)
+	clientRepo = client.NewRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConsole),
+		storeRepo,
+	)(clientRepo)
+	clientRepo = client.NewRepoLogMiddleware(logger, storeRepo)(clientRepo)
+
+	tokenRepo := client.NewPostgresTokenRepo(db)
+	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConsole),
+		storeRepo,
+	)(tokenRepo)
+	tokenRepo = client.NewTokenRepoLogMiddleware(logger, storeRepo)(tokenRepo)
+
+	var (
+		clientSVC    = client.NewService(clientRepo, tokenRepo)
+		prefixClient = "/api/clients"
+		uiHandler    = ui.MakeHandler(logger, *uiBase, *uiLocal)
+		serveMux     = http.NewServeMux()
+		opts         = []kithttp.ServerOption{
+			kithttp.ServerBefore(kithttp.PopulateRequestContext),
+			kithttp.ServerBefore(confhttp.PopulateRequestContext),
+			kithttp.ServerErrorEncoder(confhttp.ErrorEncoder),
+			kithttp.ServerFinalizer(
+				confhttp.ServerFinalizer(
+					logger,
+					instrument.ObserveRequest(instrumentNamespace, taskConsole),
+				),
+			),
+		}
+	)
+
+	serveMux.Handle(
+		fmt.Sprintf("%s/", prefixClient),
+		http.StripPrefix(
+			prefixClient,
+			client.MakeHandler(clientSVC, opts...),
+		),
+	)
+	serveMux.Handle("/", uiHandler)
 
 	srv := &http.Server{
 		Addr:         *listenAddr,

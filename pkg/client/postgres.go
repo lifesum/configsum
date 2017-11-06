@@ -21,19 +21,14 @@ const (
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc')
 		)`
 	pgClientDropTable = `DROP TABLE IF EXISTS client.clients CASCADE`
-	pgClientInsert    = `
-		/* pgClientInsert */
-		INSERT INTO
-			client.clients(
-				deleted,
-				id,
-				name
-			)
-			VALUES(
-				:deleted,
-				:id,
-				:name
-			)`
+	pgClientList      = `
+		/* pgClientList */
+		SELECT
+			created_at, deleted, id, name
+		FROM
+			client.clients
+		WHERE
+			deleted = :deleted`
 	pgClientLookup = `
 		/* pgClientLookup */
 		SELECT
@@ -45,6 +40,19 @@ const (
 			AND id = :id
 		LIMIT
 			1`
+	pgClientStore = `
+		/* pgClientStore */
+		INSERT INTO
+			client.clients(
+				deleted,
+				id,
+				name
+			)
+			VALUES(
+				:deleted,
+				:id,
+				:name
+			)`
 
 	pgTokenCreateTable = `
 		CREATE TABLE IF NOT EXISTS client.tokens(
@@ -54,7 +62,20 @@ const (
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc')
 		)`
 	pgTokenDropTable = `DROP TABLE IF EXISTS client.tokens CASCADE`
-	pgTokenLookup    = `
+	pgTokenGetLatest = `
+		/* pgTokenGetLatest */
+		SELECT
+			client_id, deleted, secret, created_at
+		FROM
+			client.tokens
+		WHERE
+			client_id = :id
+			AND deleted = :deleted
+		ORDER BY
+			created_at DESC
+		LIMIT
+			1`
+	pgTokenLookup = `
 		/* pgTokenLookup */
 		SELECT
 			client_id, deleted, secret, created_at
@@ -87,6 +108,48 @@ func NewPostgresRepo(db *sqlx.DB) Repo {
 	return &pgRepo{
 		db: db,
 	}
+}
+
+func (r *pgRepo) List() (List, error) {
+	rows, err := r.db.NamedQuery(pgClientList, map[string]interface{}{
+		"deleted": false,
+	})
+	if err != nil {
+		switch errors.Cause(pg.Wrap(err)) {
+		case pg.ErrRelationNotFound:
+			if err := r.setup(); err != nil {
+				return nil, err
+			}
+
+			return r.List()
+		default:
+			return nil, errors.Wrap(err, "List query")
+		}
+	}
+
+	cs := List{}
+
+	for rows.Next() {
+		c := Client{}
+
+		err := rows.Scan(
+			&c.createdAt,
+			&c.deleted,
+			&c.id,
+			&c.name,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "List scan")
+		}
+
+		cs = append(cs, c)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors.Wrap(err, "List rows")
+	}
+
+	return cs, nil
 }
 
 func (r *pgRepo) Lookup(id string) (Client, error) {
@@ -130,13 +193,15 @@ func (r *pgRepo) Lookup(id string) (Client, error) {
 }
 
 func (r *pgRepo) Store(id, name string) (Client, error) {
-	_, err := r.db.NamedExec(pgClientInsert, map[string]interface{}{
+	_, err := r.db.NamedExec(pgClientStore, map[string]interface{}{
 		"deleted": false,
 		"id":      id,
 		"name":    name,
 	})
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
+		case pg.ErrDuplicateKey:
+			return Client{}, errors.Wrap(errors.ErrExists, "client")
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
 				return Client{}, err
@@ -191,6 +256,46 @@ func NewPostgresTokenRepo(db *sqlx.DB) TokenRepo {
 	return &pgTokenRepo{
 		db: db,
 	}
+}
+
+func (r *pgTokenRepo) GetLatest(clientID string) (Token, error) {
+	query, args, err := r.db.BindNamed(pgTokenGetLatest, map[string]interface{}{
+		"id":      clientID,
+		"deleted": false,
+	})
+	if err != nil {
+		return Token{}, errors.Wrap(err, "bind named")
+	}
+
+	raw := struct {
+		ClientID  string    `db:"client_id"`
+		Deleted   bool      `db:"deleted"`
+		Secret    string    `db:"secret"`
+		CreatedAt time.Time `db:"created_at"`
+	}{}
+
+	err = r.db.Get(&raw, query, args...)
+	if err != nil {
+		switch errors.Cause(pg.Wrap(err)) {
+		case pg.ErrRelationNotFound:
+			if err := r.setup(); err != nil {
+				return Token{}, err
+			}
+
+			return r.GetLatest(clientID)
+		case sql.ErrNoRows:
+			return Token{}, errors.Wrap(errors.ErrNotFound, "token lookup")
+		default:
+			return Token{}, errors.Wrap(err, "token lookup")
+		}
+	}
+
+	return Token{
+		clientID:  raw.ClientID,
+		deleted:   raw.Deleted,
+		secret:    raw.Secret,
+		createdAt: raw.CreatedAt,
+	}, nil
 }
 
 func (r *pgTokenRepo) Lookup(secret string) (Token, error) {

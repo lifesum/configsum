@@ -30,6 +30,11 @@ func Cause(err error) error {
 	return errors.Cause(err)
 }
 
+// New is a wraper over github.com/pkg/errors.New.
+func New(message string) error {
+	return errors.New(message)
+}
+
 // Wrap is a wrapper over github.com/pkg/errors.Wrap.
 func Wrap(err error, message string) error {
 	return errors.Wrap(err, message)

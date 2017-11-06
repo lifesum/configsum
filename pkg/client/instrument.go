@@ -32,6 +32,14 @@ func NewRepoInstrumentMiddleware(
 	}
 }
 
+func (r *instrumentRepo) List() (cs List, err error) {
+	defer func(begin time.Time) {
+		r.opObserve(r.store, labelRepo, "List", begin, err)
+	}(time.Now())
+
+	return r.next.List()
+}
+
 func (r *instrumentRepo) Lookup(id string) (client Client, err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelRepo, "Lookup", begin, err)
@@ -85,6 +93,14 @@ func NewTokenRepoInstrumentMiddleware(
 	}
 }
 
+func (r *instrumentTokenRepo) GetLatest(clientID string) (token Token, err error) {
+	defer func(begin time.Time) {
+		r.opObserve(r.store, labelRepoToken, "GetLatest", begin, err)
+	}(time.Now())
+
+	return r.next.GetLatest(clientID)
+}
+
 func (r *instrumentTokenRepo) Lookup(secret string) (token Token, err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelRepoToken, "Lookup", begin, err)
@@ -115,8 +131,4 @@ func (r *instrumentTokenRepo) teardown() (err error) {
 	}(time.Now())
 
 	return r.next.teardown()
-}
-
-func (r *instrumentTokenRepo) track(begin time.Time, err error, op string) {
-	r.opObserve(r.store, labelRepoToken, op, begin, err)
 }
