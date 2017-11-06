@@ -19,7 +19,7 @@ func TestServiceCreate(t *testing.T) {
 		svc       = NewService(repo, tokenRepo)
 	)
 
-	clientSVC, err := svc.Create(name)
+	clientSVC, secret, err := svc.Create(name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,6 +39,10 @@ func TestServiceCreate(t *testing.T) {
 	}
 
 	if have, want := token.clientID, clientSVC.id; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := token.secret, secret; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

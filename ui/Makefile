@@ -1,6 +1,8 @@
 GOBIN   ?= $(shell go env GOBIN)
 NODEBIN ?= $(shell npm bin)
 
+export PATH := $(NODEBIN):$(PATH)
+
 help:
 	@echo "make bundle            Bundle static assets into Go source code (requires esc)"
 	@echo "make compile           Compiles Elm code to Javascript (requires elm-make)"

@@ -14,6 +14,7 @@ const tmplIndex = `<!DOCTYPE html>
     <meta charset="utf-8">
     <base href="{{ .Base }}">
     <link href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto:300,400,500,700" rel="stylesheet">
+    <link href="styles/nucleo.css" rel="stylesheet">
     <link href="styles/normalize.css" rel="stylesheet">
     <link href="styles/console.css" rel="stylesheet">
     <script src="scripts/console.js" type="text/javascript"></script>
@@ -28,6 +29,10 @@ const tmplIndex = `<!DOCTYPE html>
 // MakeHandler returns am http.Handler for the UI.
 func MakeHandler(logger log.Logger, base string, local bool) http.Handler {
 	r := mux.NewRouter()
+
+	r.Methods("GET").PathPrefix("/fonts").Name("fonts").Handler(
+		http.FileServer(_escFS(local)),
+	)
 
 	r.Methods("GET").PathPrefix("/scripts").Name("scripts").Handler(
 		http.FileServer(_escFS(local)),

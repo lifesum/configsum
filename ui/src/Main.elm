@@ -3,9 +3,11 @@ module Main exposing (main)
 import Html exposing (Html, div, footer, h1, text)
 import Html.Attributes exposing (class)
 import Navigation
+import Task
 import Action exposing (Msg(..))
 import Page.Clients as Clients
 import Page.Blank as Blank
+import Page.Errored as Errored exposing (PageLoadError)
 import Route exposing (Route, navigate)
 import Views.Page as Page
 
@@ -39,7 +41,8 @@ type alias Model =
 
 type Page
     = Blank String
-    | Clients
+    | Clients Clients.Model
+    | Errored PageLoadError
     | NotFound
 
 
@@ -76,24 +79,50 @@ subscriptions _ =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case (Debug.log "MSG" msg) of
-        LoadPage maybeRoute ->
+    let
+        page =
+            getPage model.pageState
+
+        toPage toModel toMsg subUpdate subMsg subModel =
             let
-                route =
-                    case maybeRoute of
-                        Nothing ->
-                            Route.Clients
-
-                        Just route ->
-                            route
+                ( newModel, newCmd ) =
+                    subUpdate subMsg subModel
             in
-                setRoute maybeRoute { model | route = route }
+                ( { model | pageState = Loaded (toModel newModel) }, Cmd.map toMsg newCmd )
+    in
+        case ( (Debug.log "MSG" msg), page ) of
+            ( ClientsLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
 
-        SetRoute route ->
-            ( model, navigate route )
+            ( ClientsLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Clients subModel) }, Cmd.none )
 
-        Tick _ ->
-            ( model, Cmd.none )
+            ( LoadPage maybeRoute, _ ) ->
+                let
+                    route =
+                        case maybeRoute of
+                            Nothing ->
+                                Route.Clients
+
+                            Just route ->
+                                route
+                in
+                    setRoute maybeRoute { model | route = route }
+
+            ( SetRoute route, _ ) ->
+                ( model, navigate route )
+
+            ( Tick _, _ ) ->
+                ( model, Cmd.none )
+
+            ( ClientsMsg subMsg, Clients subModel ) ->
+                toPage Clients ClientsMsg Clients.update subMsg subModel
+
+            ( _, NotFound ) ->
+                ( model, Cmd.none )
+
+            ( _, _ ) ->
+                ( model, Cmd.none )
 
 
 setRoute : Maybe Route.Route -> Model -> ( Model, Cmd Msg )
@@ -103,7 +132,7 @@ setRoute maybeRoute model =
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
         Just Route.Clients ->
-            ( { model | pageState = Loaded Clients }, Cmd.none )
+            ( { model | pageState = TransitioningFrom (getPage model.pageState) }, Task.attempt ClientsLoaded Clients.init )
 
         Just Route.Configs ->
             ( { model | pageState = Loaded (Blank "Configs") }, Cmd.none )
@@ -133,8 +162,10 @@ view model =
         div []
             [ content
             , footer []
-                [ div [ class "debug" ] [ text (toString model) ]
-                ]
+                []
+
+            --[ div [ class "debug" ] [ text (toString model) ]
+            --]
             ]
 
 
@@ -145,14 +176,33 @@ viewPage isLoading page route =
             Page.frame isLoading route
     in
         case page of
-            Clients ->
-                Clients.view
-                    |> frame
-
             Blank name ->
                 Blank.view name
-                    |> frame
+                    |> frame name
+
+            Clients subModel ->
+                Clients.view subModel
+                    |> Html.map ClientsMsg
+                    |> frame "clients"
+
+            Errored error ->
+                Errored.view error
+                    |> frame "errored"
 
             NotFound ->
                 Blank.view "Not Found"
-                    |> frame
+                    |> frame "not-found"
+
+
+
+-- HELPER
+
+
+getPage : PageState -> Page
+getPage state =
+    case state of
+        Loaded page ->
+            page
+
+        TransitioningFrom page ->
+            page

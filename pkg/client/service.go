@@ -12,7 +12,7 @@ import (
 
 // Service provides Clients.
 type Service interface {
-	Create(name string) (Client, error)
+	Create(name string) (Client, string, error)
 	ListWithToken() (clientTokens, error)
 	LookupBySecret(secret string) (Client, error)
 }
@@ -32,28 +32,28 @@ func NewService(repo Repo, tokenRepo TokenRepo) Service {
 	}
 }
 
-func (s *service) Create(name string) (Client, error) {
+func (s *service) Create(name string) (Client, string, error) {
 	clientID, err := ulid.New(ulid.Timestamp(time.Now()), s.seed)
 	if err != nil {
-		return Client{}, err
+		return Client{}, "", err
 	}
 
 	c, err := s.repo.Store(clientID.String(), name)
 	if err != nil {
-		return Client{}, err
+		return Client{}, "", err
 	}
 
 	secret, err := generate.SecureToken(secretByteLen)
 	if err != nil {
-		return Client{}, err
+		return Client{}, "", err
 	}
 
 	_, err = s.tokenRepo.Store(clientID.String(), secret)
 	if err != nil {
-		return Client{}, err
+		return Client{}, "", err
 	}
 
-	return c, nil
+	return c, secret, nil
 }
 
 func (s *service) ListWithToken() (clientTokens, error) {

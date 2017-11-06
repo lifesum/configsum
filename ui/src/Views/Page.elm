@@ -8,11 +8,11 @@ import Action exposing (Msg(..))
 import Route exposing (Route)
 
 
-frame : Bool -> Route -> Html Msg -> Html Msg
-frame isLoading route content =
+frame : Bool -> Route -> String -> Html Msg -> Html Msg
+frame isLoading route page content =
     div []
         [ viewHeader route
-        , main_ []
+        , main_ [ class ("page " ++ page) ]
             [ content
             ]
         ]
