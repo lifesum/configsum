@@ -41,16 +41,16 @@ func (l *location) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-type userContext struct {
+type renderContext struct {
 	Device device `json:"device"`
 }
 
-type userRequest struct {
+type renderRequest struct {
 	baseConfig string
-	context    userContext
+	context    renderContext
 }
 
-type userResponse struct {
+type renderResponse struct {
 	baseID    string
 	baseName  string
 	clientID  string
@@ -59,14 +59,14 @@ type userResponse struct {
 	createdAt time.Time
 }
 
-func (r userResponse) StatusCode() int {
+func (r renderResponse) StatusCode() int {
 	return http.StatusCreated
 }
 
-func userEndpoint(svc ServiceUser) endpoint.Endpoint {
+func renderEndpoint(svc ServiceUser) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		var (
-			req      = request.(userRequest)
+			req      = request.(renderRequest)
 			clientID = ctx.Value(client.ContextKeyClientID).(string)
 			userID   = ctx.Value(auth.ContextKeyUserID).(string)
 		)
@@ -76,7 +76,7 @@ func userEndpoint(svc ServiceUser) endpoint.Endpoint {
 			return nil, err
 		}
 
-		return userResponse{
+		return renderResponse{
 			baseID:    c.baseID,
 			baseName:  req.baseConfig,
 			clientID:  clientID,

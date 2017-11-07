@@ -44,9 +44,9 @@ func MakeHandler(
 
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
 		kithttp.NewServer(
-			auth(userEndpoint(svc)),
-			decodeJSONSchema(decodeUserRequest, decodeClientPayloadSchema),
-			encodeUserResponse,
+			auth(renderEndpoint(svc)),
+			decodeJSONSchema(decodeRenderRequest, decodeClientPayloadSchema),
+			encodeRenderResponse,
 			append(
 				opts,
 				kithttp.ServerBefore(extractMuxVars(varBaseConfig)),
@@ -103,31 +103,31 @@ func extractMuxVars(keys ...muxVar) kithttp.RequestFunc {
 	}
 }
 
-func decodeUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeRenderRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	baseConfig, ok := ctx.Value(varBaseConfig).(string)
 	if !ok {
 		return nil, errors.Wrap(errors.ErrVarMissing, "baseConfig missing")
 	}
 
-	c := userContext{}
+	c := renderContext{}
 
 	err := json.NewDecoder(r.Body).Decode(&c)
 	if err != nil {
 		return nil, err
 	}
 
-	return userRequest{
+	return renderRequest{
 		baseConfig: baseConfig,
 		context:    c,
 	}, nil
 }
 
-func encodeUserResponse(
+func encodeRenderResponse(
 	_ context.Context,
 	w http.ResponseWriter,
 	response interface{},
 ) error {
-	r := response.(userResponse)
+	r := response.(renderResponse)
 
 	w.Header().Set(headerContentType, "application/json; charset=utf-8")
 	w.Header().Set(headerBaseID, r.baseID)

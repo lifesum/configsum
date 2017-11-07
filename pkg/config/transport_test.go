@@ -99,7 +99,7 @@ func TestDecodeJSONSchemaMissingField(t *testing.T) {
 	}
 }
 
-func TestDecodeUserRequest(t *testing.T) {
+func TestDecodeRenderRequest(t *testing.T) {
 	var (
 		baseConfig = generate.RandomString(6)
 		ctx        = context.WithValue(context.Background(), varBaseConfig, baseConfig)
@@ -109,14 +109,14 @@ func TestDecodeUserRequest(t *testing.T) {
 		r          = httptest.NewRequest("PUT", target, payload)
 	)
 
-	raw, err := decodeUserRequest(ctx, r)
+	raw, err := decodeRenderRequest(ctx, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := userRequest{
+	want := renderRequest{
 		baseConfig: baseConfig,
-		context: userContext{
+		context: renderContext{
 			Device: device{
 				Location: location{
 					locale: locale,
@@ -125,7 +125,7 @@ func TestDecodeUserRequest(t *testing.T) {
 		},
 	}
 
-	if have := raw.(userRequest); !reflect.DeepEqual(have, want) {
+	if have := raw.(renderRequest); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
