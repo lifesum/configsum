@@ -1,18 +1,47 @@
 package config
 
-import "time"
+import (
+	"time"
+)
 
 // BaseRepo provides access to base configs.
 type BaseRepo interface {
-	Get(clientID, name string) (BaseConfig, error)
+	lifecycle
+
+	Create(id, clientID, name string, parameters rendered) (BaseConfig, error)
+	GetByID(id string) (BaseConfig, error)
+	GetByName(clientID, name string) (BaseConfig, error)
+	List() (BaseList, error)
+	Update(BaseConfig) (BaseConfig, error)
 }
+
+// BaseRepoMiddleware is chainable behaviour modifier for BaseRepo.
+type BaseRepoMiddleware func(BaseRepo) BaseRepo
 
 // BaseConfig is the entire space of available parameters.
 type BaseConfig struct {
-	ClientID string
-	ID       string
-	Name     string
-	Rendered rendered
+	ClientID   string
+	Deleted    bool
+	ID         string
+	Name       string
+	Parameters rendered
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+// BaseList is a collection of BaseConfig.
+type BaseList []BaseConfig
+
+func (l BaseList) Len() int {
+	return len(l)
+}
+
+func (l BaseList) Less(i, j int) bool {
+	return l[i].CreatedAt.After(l[j].CreatedAt)
+}
+
+func (l BaseList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
 }
 
 type rendered map[string]interface{}
@@ -67,6 +96,6 @@ type UserConfig struct {
 }
 
 type lifecycle interface {
-	Setup() error
-	Teardown() error
+	setup() error
+	teardown() error
 }

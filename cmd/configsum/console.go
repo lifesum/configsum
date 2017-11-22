@@ -12,6 +12,7 @@ import (
 	"github.com/jmoiron/sqlx"
 
 	"github.com/lifesum/configsum/pkg/client"
+	"github.com/lifesum/configsum/pkg/config"
 	"github.com/lifesum/configsum/pkg/instrument"
 	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 	"github.com/lifesum/configsum/pkg/ui"
@@ -55,6 +56,13 @@ func runConsole(args []string, logger log.Logger) error {
 		return err
 	}
 
+	baseRepo := config.NewPostgresBaseRepo(db)
+	baseRepo = config.NewBaseRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConsole),
+		storeRepo,
+	)(baseRepo)
+	baseRepo = config.NewBaseRepoLogMiddleware(logger, storeRepo)(baseRepo)
+
 	clientRepo := client.NewPostgresRepo(db)
 	clientRepo = client.NewRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
@@ -70,11 +78,12 @@ func runConsole(args []string, logger log.Logger) error {
 	tokenRepo = client.NewTokenRepoLogMiddleware(logger, storeRepo)(tokenRepo)
 
 	var (
-		clientSVC    = client.NewService(clientRepo, tokenRepo)
-		prefixClient = "/api/clients"
-		uiHandler    = ui.MakeHandler(logger, *uiBase, *uiLocal)
-		serveMux     = http.NewServeMux()
-		opts         = []kithttp.ServerOption{
+		baseConfigSVC    = config.NewBaseService(baseRepo, clientRepo)
+		clientSVC        = client.NewService(clientRepo, tokenRepo)
+		prefixBaseConfig = "/api/configs/base"
+		prefixClient     = "/api/clients"
+		serveMux         = http.NewServeMux()
+		opts             = []kithttp.ServerOption{
 			kithttp.ServerBefore(kithttp.PopulateRequestContext),
 			kithttp.ServerBefore(confhttp.PopulateRequestContext),
 			kithttp.ServerErrorEncoder(confhttp.ErrorEncoder),
@@ -88,13 +97,20 @@ func runConsole(args []string, logger log.Logger) error {
 	)
 
 	serveMux.Handle(
+		fmt.Sprintf("%s/", prefixBaseConfig),
+		http.StripPrefix(
+			prefixBaseConfig,
+			config.MakeBaseHandler(baseConfigSVC, opts...),
+		),
+	)
+	serveMux.Handle(
 		fmt.Sprintf("%s/", prefixClient),
 		http.StripPrefix(
 			prefixClient,
 			client.MakeHandler(clientSVC, opts...),
 		),
 	)
-	serveMux.Handle("/", uiHandler)
+	serveMux.Handle("/", ui.MakeHandler(logger, *uiBase, *uiLocal))
 
 	srv := &http.Server{
 		Addr:         *listenAddr,

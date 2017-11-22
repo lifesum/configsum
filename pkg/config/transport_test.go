@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/oklog/ulid"
 	"github.com/xeipuuv/gojsonschema"
 	"golang.org/x/text/language"
 
@@ -99,7 +102,34 @@ func TestDecodeJSONSchemaMissingField(t *testing.T) {
 	}
 }
 
-func TestDecodeRenderRequest(t *testing.T) {
+func TestDecodeBaseUpdateRequest(t *testing.T) {
+	var (
+		seed    = rand.New(rand.NewSource(time.Now().UnixNano()))
+		id, _   = ulid.New(ulid.Timestamp(time.Now()), seed)
+		ctx     = context.WithValue(context.Background(), varID, id.String())
+		payload = bytes.NewBufferString(`{"parameters": {"feature_decode_toggled": true}}`)
+		target  = fmt.Sprintf("/%s", id)
+		r       = httptest.NewRequest("PUT", target, payload)
+	)
+
+	raw, err := decodeBaseUpdateRequest(ctx, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := baseUpdateRequest{
+		id: id.String(),
+		parameters: rendered{
+			"feature_decode_toggled": true,
+		},
+	}
+
+	if have := raw.(baseUpdateRequest); !reflect.DeepEqual(have, want) {
+		t.Errorf("\nhave %#v\nwant %#v", have, want)
+	}
+}
+
+func TestDecodeUserRenderRequest(t *testing.T) {
 	var (
 		baseConfig = generate.RandomString(6)
 		ctx        = context.WithValue(context.Background(), varBaseConfig, baseConfig)
@@ -109,14 +139,14 @@ func TestDecodeRenderRequest(t *testing.T) {
 		r          = httptest.NewRequest("PUT", target, payload)
 	)
 
-	raw, err := decodeRenderRequest(ctx, r)
+	raw, err := decodeUserRenderRequest(ctx, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := renderRequest{
+	want := userRenderRequest{
 		baseConfig: baseConfig,
-		context: renderContext{
+		context: userRenderContext{
 			Device: device{
 				Location: location{
 					locale: locale,
@@ -125,7 +155,7 @@ func TestDecodeRenderRequest(t *testing.T) {
 		},
 	}
 
-	if have := raw.(renderRequest); !reflect.DeepEqual(have, want) {
+	if have := raw.(userRenderRequest); !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

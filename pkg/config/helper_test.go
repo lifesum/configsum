@@ -2,7 +2,6 @@ package config
 
 import (
 	"math/rand"
-	"testing"
 	"time"
 )
 
@@ -11,12 +10,11 @@ const (
 	numCharacterSet = "0123456789"
 )
 
-var seed = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-type prepareFunc func(t *testing.T) UserRepo
-
 func randString(charset string) string {
-	b := make([]byte, len(charset))
+	var (
+		b    = make([]byte, len(charset))
+		seed = rand.New(rand.NewSource(time.Now().UnixNano()))
+	)
 
 	for i := range b {
 		b[i] = charset[seed.Intn(len(charset))]
