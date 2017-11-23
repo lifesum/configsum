@@ -6,6 +6,7 @@ import (
 
 // Entity errors.
 var (
+	ErrID       = errors.New("id creation")
 	ErrExists   = errors.New("entity exists")
 	ErrNotFound = errors.New("entity not found")
 )
@@ -17,6 +18,11 @@ var (
 	ErrSignatureMissing   = errors.New("signature missing")
 	ErrSignatureMissmatch = errors.New("signature missmatch")
 	ErrUserIDMissing      = errors.New("userID missing")
+)
+
+// Config errors.
+var (
+	ErrParametersInvalid = errors.New("parameters invalid")
 )
 
 // Transport errors.

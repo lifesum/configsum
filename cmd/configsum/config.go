@@ -83,10 +83,10 @@ func runConfig(args []string, logger log.Logger) error {
 		}
 
 		t := struct {
-			ClientID string                 `json:"clientID"`
-			ID       string                 `json:"id"`
-			Name     string                 `json:"name"`
-			Rendered map[string]interface{} `json:"rendered"`
+			ClientID   string                 `json:"clientID"`
+			ID         string                 `json:"id"`
+			Name       string                 `json:"name"`
+			Parameters map[string]interface{} `json:"rendered"`
 		}{}
 
 		err = json.NewDecoder(f).Decode(&t)
@@ -97,24 +97,18 @@ func runConfig(args []string, logger log.Logger) error {
 		state = config.InmemBaseState{
 			t.ClientID: map[string]config.BaseConfig{
 				t.Name: config.BaseConfig{
-					ClientID: t.ClientID,
-					ID:       t.ID,
-					Name:     t.Name,
-					Rendered: t.Rendered,
+					ClientID:   t.ClientID,
+					ID:         t.ID,
+					Name:       t.Name,
+					Parameters: t.Parameters,
 				},
 			},
 		}
 	}
 
-	baseRepo, err := config.NewInmemBaseRepo(state)
-	if err != nil {
-		return err
-	}
+	baseRepo := config.NewInmemBaseRepo(state)
 
-	userRepo, err := config.NewPostgresUserRepo(db)
-	if err != nil {
-		return err
-	}
+	userRepo := config.NewPostgresUserRepo(db)
 	userRepo = config.NewUserRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
@@ -140,7 +134,7 @@ func runConfig(args []string, logger log.Logger) error {
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
 		clientSVC    = client.NewService(clientRepo, tokenRepo)
-		svc          = config.NewServiceUser(baseRepo, userRepo)
+		svc          = config.NewUserService(baseRepo, userRepo)
 		opts         = []kithttp.ServerOption{
 			kithttp.ServerBefore(kithttp.PopulateRequestContext),
 			kithttp.ServerBefore(confhttp.PopulateRequestContext),

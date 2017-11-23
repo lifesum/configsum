@@ -17,6 +17,34 @@ import (
 
 var pgURI string
 
+func TestPostgresBaseRepoCreateDuplicate(t *testing.T) {
+	testBaseRepoCreateDuplicate(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoGetByID(t *testing.T) {
+	testBaseRepoGetByID(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoGetByIDNotFound(t *testing.T) {
+	testBaseRepoGetByIDNotFound(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoGetByName(t *testing.T) {
+	testBaseRepoGetByName(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoGetByNameNotFound(t *testing.T) {
+	testBaseRepoGetByNameNotFound(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoUpdate(t *testing.T) {
+	testBaseRepoUpdate(t, preparePGBaseRepo)
+}
+
+func TestPostgresBaseRepoList(t *testing.T) {
+	testBaseRepoList(t, preparePGBaseRepo)
+}
+
 func TestPostgresUserRepoGetLatest(t *testing.T) {
 	testUserRepoGetLatest(t, preparePGUserRepo)
 }
@@ -29,18 +57,30 @@ func TestPostgresUserRepoAppendDuplicate(t *testing.T) {
 	testUserRepoAppendDuplicate(t, preparePGUserRepo)
 }
 
+func preparePGBaseRepo(t *testing.T) BaseRepo {
+	db, err := sqlx.Connect("postgres", pgURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := NewPostgresBaseRepo(db)
+
+	if err := r.teardown(); err != nil {
+		t.Fatal(err)
+	}
+
+	return r
+}
+
 func preparePGUserRepo(t *testing.T) UserRepo {
 	db, err := sqlx.Connect("postgres", pgURI)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	r, err := NewPostgresUserRepo(db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	r := NewPostgresUserRepo(db)
 
-	if err := r.Teardown(); err != nil {
+	if err := r.teardown(); err != nil {
 		t.Fatal(err)
 	}
 

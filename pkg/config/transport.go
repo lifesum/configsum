@@ -29,24 +29,78 @@ const (
 // URL fragments.
 const (
 	varBaseConfig muxVar = "baseConfig"
+	varID         muxVar = "id"
 )
 
 type muxVar string
 
+// MakeBaseHandler returns an http.Handler for the base config service.
+func MakeBaseHandler(
+	svc BaseService,
+	opts ...kithttp.ServerOption,
+) http.Handler {
+	r := mux.NewRouter()
+	r.StrictSlash(true)
+
+	r.Methods("GET").Path(`/`).Name("configBaseList").Handler(
+		kithttp.NewServer(
+			baseListEndpoint(svc),
+			decodeBaseListRequest,
+			kithttp.EncodeJSONResponse,
+			opts...,
+		),
+	)
+
+	r.Methods("POST").Path(`/`).Name("configBaseCreate").Handler(
+		kithttp.NewServer(
+			baseCreateEndpoint(svc),
+			decodeJSONSchema(decodeBaseCreateRequest, schemaBaseCreateRequest),
+			kithttp.EncodeJSONResponse,
+			opts...,
+		),
+	)
+
+	r.Methods("GET").Path(`/{id:[a-zA-Z0-9]+}`).Name("configBaseGet").Handler(
+		kithttp.NewServer(
+			baseGetEndpoint(svc),
+			decodeBaseGetRequest,
+			kithttp.EncodeJSONResponse,
+			append(
+				opts,
+				kithttp.ServerBefore(extractMuxVars(varID)),
+			)...,
+		),
+	)
+
+	r.Methods("PUT").Path(`/{id:[a-zA-Z0-9]+}`).Name("configBaseUpdate").Handler(
+		kithttp.NewServer(
+			baseUpdateEndpoint(svc),
+			decodeJSONSchema(decodeBaseUpdateRequest, schemaBaseUpdateRequest),
+			kithttp.EncodeJSONResponse,
+			append(
+				opts,
+				kithttp.ServerBefore(extractMuxVars(varID)),
+			)...,
+		),
+	)
+
+	return r
+}
+
 // MakeHandler returns an http.Handler for the user config service.
 func MakeHandler(
-	svc ServiceUser,
+	svc UserService,
 	auth endpoint.Middleware,
 	opts ...kithttp.ServerOption,
 ) http.Handler {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
-	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUser").Handler(
+	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUserRender").Handler(
 		kithttp.NewServer(
-			auth(renderEndpoint(svc)),
-			decodeJSONSchema(decodeRenderRequest, decodeClientPayloadSchema),
-			encodeRenderResponse,
+			auth(userRenderEndpoint(svc)),
+			decodeJSONSchema(decodeUserRenderRequest, schemaUserRenderRequest),
+			encodeUserRenderResponse,
 			append(
 				opts,
 				kithttp.ServerBefore(extractMuxVars(varBaseConfig)),
@@ -103,31 +157,79 @@ func extractMuxVars(keys ...muxVar) kithttp.RequestFunc {
 	}
 }
 
-func decodeRenderRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeBaseCreateRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	v := struct {
+		ClientID string `json:"client_id"`
+		Name     string `json:"name"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&v)
+	if err != nil {
+		return nil, errors.Wrapf(errors.ErrInvalidPayload, "%s", err)
+	}
+
+	return baseCreateRequest{clientID: v.ClientID, name: v.Name}, nil
+}
+
+func decodeBaseGetRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id, ok := ctx.Value(varID).(string)
+	if !ok {
+		return nil, errors.Wrap(errors.ErrVarMissing, "id missing")
+	}
+
+	return baseGetRequest{id: id}, nil
+}
+
+func decodeBaseListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return baseListRequest{}, nil
+}
+
+func decodeBaseUpdateRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id, ok := ctx.Value(varID).(string)
+	if !ok {
+		return nil, errors.Wrap(errors.ErrVarMissing, "id missing")
+	}
+
+	v := struct {
+		Parameters rendered `json:"parameters"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&v)
+	if err != nil {
+		return nil, errors.Wrapf(errors.ErrInvalidPayload, "%s", err)
+	}
+
+	return baseUpdateRequest{
+		id:         id,
+		parameters: v.Parameters,
+	}, nil
+}
+
+func decodeUserRenderRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	baseConfig, ok := ctx.Value(varBaseConfig).(string)
 	if !ok {
 		return nil, errors.Wrap(errors.ErrVarMissing, "baseConfig missing")
 	}
 
-	c := renderContext{}
+	c := userRenderContext{}
 
 	err := json.NewDecoder(r.Body).Decode(&c)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(errors.ErrInvalidPayload, "%s", err)
 	}
 
-	return renderRequest{
+	return userRenderRequest{
 		baseConfig: baseConfig,
 		context:    c,
 	}, nil
 }
 
-func encodeRenderResponse(
+func encodeUserRenderResponse(
 	_ context.Context,
 	w http.ResponseWriter,
 	response interface{},
 ) error {
-	r := response.(renderResponse)
+	r := response.(userRenderResponse)
 
 	w.Header().Set(headerContentType, "application/json; charset=utf-8")
 	w.Header().Set(headerBaseID, r.baseID)

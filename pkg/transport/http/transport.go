@@ -37,7 +37,7 @@ func ErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 		w.WriteHeader(http.StatusUnauthorized)
 	case errors.ErrSignatureMissing, errors.ErrSignatureMissmatch, errors.ErrUserIDMissing:
 		w.WriteHeader(http.StatusUnauthorized)
-	case errors.ErrInvalidPayload:
+	case errors.ErrInvalidPayload, errors.ErrParametersInvalid:
 		w.WriteHeader(http.StatusBadRequest)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)

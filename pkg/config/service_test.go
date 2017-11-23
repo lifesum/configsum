@@ -5,9 +5,34 @@ import (
 	"testing"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 )
 
-func TestServiceUserRender(t *testing.T) {
+func TestBaseServiceUpdate(t *testing.T) {
+	var (
+		clientID = generate.RandomString(12)
+		baseID   = generate.RandomString(16)
+		baseName = generate.RandomString(6)
+		baseRepo = NewInmemBaseRepo(InmemBaseState{
+			clientID: map[string]BaseConfig{
+				baseName: BaseConfig{
+					ClientID:   clientID,
+					ID:         baseID,
+					Name:       baseName,
+					Parameters: nil,
+				},
+			},
+		})
+		svc = NewBaseService(baseRepo, nil)
+	)
+
+	_, err := svc.Update(baseID, rendered{})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUserServiceRender(t *testing.T) {
 	var (
 		clientID   = randString(characterSet)
 		baseID     = randString(characterSet)
@@ -15,19 +40,19 @@ func TestServiceUserRender(t *testing.T) {
 		baseRender = rendered{
 			randString(characterSet): false,
 		}
-		baseRepo, _ = NewInmemBaseRepo(InmemBaseState{
+		baseRepo = NewInmemBaseRepo(InmemBaseState{
 			clientID: map[string]BaseConfig{
 				baseName: BaseConfig{
-					ClientID: clientID,
-					ID:       baseID,
-					Name:     baseName,
-					Rendered: baseRender,
+					ClientID:   clientID,
+					ID:         baseID,
+					Name:       baseName,
+					Parameters: baseRender,
 				},
 			},
 		})
-		userID      = randString(characterSet)
-		userRepo, _ = NewInmemUserRepo()
-		svc         = NewServiceUser(baseRepo, userRepo)
+		userID   = randString(characterSet)
+		userRepo = NewInmemUserRepo()
+		svc      = NewUserService(baseRepo, userRepo)
 	)
 
 	uc, err := svc.Render(clientID, baseName, userID)
@@ -58,18 +83,49 @@ func TestServiceUserRender(t *testing.T) {
 	}
 }
 
-func TestServiceUserRenderConfigMissingBaseConfig(t *testing.T) {
+func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 	var (
-		clientID    = randString(characterSet)
-		baseName    = randString(characterSet)
-		baseRepo, _ = NewInmemBaseRepo(nil)
-		userID      = randString(characterSet)
-		userRepo, _ = NewInmemUserRepo()
-		svc         = NewServiceUser(baseRepo, userRepo)
+		clientID = randString(characterSet)
+		baseName = randString(characterSet)
+		baseRepo = NewInmemBaseRepo(nil)
+		userID   = randString(characterSet)
+		userRepo = NewInmemUserRepo()
+		svc      = NewUserService(baseRepo, userRepo)
 	)
 
 	_, err := svc.Render(clientID, baseName, userID)
 	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestValidateParamDelta(t *testing.T) {
+	var (
+		key   = generate.RandomString(6)
+		cases = []struct {
+			base rendered
+			new  rendered
+		}{
+			{
+				base: rendered{
+					key: false,
+				},
+			}, // New missing.
+			{
+				base: rendered{
+					key: false,
+				},
+				new: rendered{
+					key: 12,
+				},
+			}, // Invalid change of types.
+		}
+	)
+
+	for _, c := range cases {
+		err := validateParamDelta(c.base, c.new)
+		if have, want := errors.Cause(err), errors.ErrParametersInvalid; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
 	}
 }

@@ -2,10 +2,62 @@ package config
 
 import "github.com/xeipuuv/gojsonschema"
 
-const requestCapabilities = `
+const schemaDefBaseCreate = `
+{
+  "$schema":"http://json-schema.org/draft-06/schema#",
+  "title":"Base update",
+  "description":"Request data for base config updates.",
+  "type":"object",
+  "required":[
+    "client_id", "name"
+  ],
+  "properties": {
+    "client_id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    }
+  }
+}`
+
+const schemaDefBaseUpdate = `
+{
+  "$schema":"http://json-schema.org/draft-06/schema#",
+  "title":"Base update",
+  "description":"Request data for base config updates.",
+  "type":"object",
+  "required":[
+    "parameters"
+  ],
+  "properties":{
+    "parameters":{
+      "type":"object",
+      "additionalProperties":false,
+      "minProperties":1,
+      "patternProperties":{
+        "^feature_([a-z-]+)_([a-z]+)$":{
+          "anyOf":[
+            {
+              "type":"boolean"
+            },
+            {
+              "type":"number"
+            },
+            {
+              "type":"string"
+            }
+          ]
+        }
+      }
+    }
+  }
+}`
+
+const schemaDefUserRender = `
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
-  "title": "Client payload",
+  "title": "Render context",
   "description": "Common set of information to determine device capabilities and user provided info.",
   "type": "object",
   "properties": {
@@ -109,12 +161,31 @@ const requestCapabilities = `
   ]
 }`
 
-var decodeClientPayloadSchema *gojsonschema.Schema
+var (
+	schemaBaseCreateRequest *gojsonschema.Schema
+	schemaBaseUpdateRequest *gojsonschema.Schema
+	schemaUserRenderRequest *gojsonschema.Schema
+)
 
 func init() {
 	var err error
 
-	decodeClientPayloadSchema, err = gojsonschema.NewSchema(gojsonschema.NewStringLoader(requestCapabilities))
+	schemaBaseCreateRequest, err = gojsonschema.NewSchema(
+		gojsonschema.NewStringLoader(schemaDefBaseCreate),
+	)
+	if err != nil {
+	}
+
+	schemaBaseUpdateRequest, err = gojsonschema.NewSchema(
+		gojsonschema.NewStringLoader(schemaDefBaseUpdate),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	schemaUserRenderRequest, err = gojsonschema.NewSchema(
+		gojsonschema.NewStringLoader(schemaDefUserRender),
+	)
 	if err != nil {
 		panic(err)
 	}
