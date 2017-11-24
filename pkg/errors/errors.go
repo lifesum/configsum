@@ -31,9 +31,22 @@ var (
 	ErrVarMissing     = errors.New("variable missing")
 )
 
+// Rule errors.
+var (
+	ErrInvalidRule        = errors.New("invalid rule")
+	ErrInvalidTypeToMatch = errors.New("invalid input type")
+	ErrNoRuleForID        = errors.New("no rules for this ID")
+	ErrNoRuleWithName     = errors.New("no rule with name")
+)
+
 // Cause is a wraper over github.com/pkg/errors.Cause.
 func Cause(err error) error {
 	return errors.Cause(err)
+}
+
+// Errorf is a wraper over github.com/pkg/errors.Errorf.
+func Errorf(format string, args ...interface{}) error {
+	return errors.Errorf(format, args...)
 }
 
 // New is a wraper over github.com/pkg/errors.New.
