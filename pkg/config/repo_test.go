@@ -271,53 +271,21 @@ func testBaseRepoUpdate(t *testing.T, p prepareBaseRepoFunc) {
 	}
 }
 
-func testUserRepoAppendDuplicate(t *testing.T, p prepareUserRepoFunc) {
-	var (
-		baseID    = randString(characterSet)
-		userID    = randString(numCharacterSet)
-		render    = rendered{}
-		repo      = p(t)
-		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
-		decisions = ruleDecisions{
-			randString(numCharacterSet): []int{seed.Int(), seed.Int()},
-			randString(numCharacterSet): []int{seed.Int()},
-			randString(numCharacterSet): []int{},
-		}
-	)
-
-	render.SetBool(randString(numCharacterSet), false)
-
-	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
-	if have, want := errors.Cause(err), errors.ErrExists; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-}
-
 func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 	var (
-		baseID    = randString(characterSet)
-		userID    = randString(numCharacterSet)
+		baseID    = generate.RandomString(24)
+		userID    = generate.RandomString(24)
 		render    = rendered{}
 		repo      = p(t)
 		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 		decisions = ruleDecisions{
-			randString(numCharacterSet): []int{seed.Intn(100), seed.Intn(100)},
-			randString(numCharacterSet): []int{seed.Intn(100)},
-			randString(numCharacterSet): []int{},
+			generate.RandomString(24): []int{seed.Intn(100), seed.Intn(100)},
+			generate.RandomString(24): []int{seed.Intn(100)},
+			generate.RandomString(24): []int{},
 		}
 	)
 
-	render.setNumber(randString(characterSet), seed.Float64())
+	render.setNumber(generate.RandomString(24), seed.Float64())
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {
@@ -325,9 +293,9 @@ func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 	}
 
 	_, err = repo.Append(
-		randString(characterSet),
-		randString(characterSet),
-		randString(numCharacterSet),
+		generate.RandomString(24),
+		generate.RandomString(24),
+		generate.RandomString(24),
 		decisions,
 		render,
 	)
@@ -336,7 +304,7 @@ func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 	}
 
 	_, err = repo.Append(
-		randString(characterSet),
+		generate.RandomString(24),
 		baseID,
 		userID,
 		nil,
@@ -379,13 +347,45 @@ func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 
 func testUserRepoGetLatestNotFound(t *testing.T, p prepareUserRepoFunc) {
 	var (
-		baseID = randString(characterSet)
-		userID = randString(numCharacterSet)
+		baseID = generate.RandomString(24)
+		userID = generate.RandomString(24)
 		repo   = p(t)
 	)
 
 	_, err := repo.GetLatest(baseID, userID)
 	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func testUserRepoAppendDuplicate(t *testing.T, p prepareUserRepoFunc) {
+	var (
+		baseID    = generate.RandomString(24)
+		userID    = generate.RandomString(24)
+		render    = rendered{}
+		repo      = p(t)
+		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
+		decisions = ruleDecisions{
+			generate.RandomString(32): []int{seed.Int(), seed.Int()},
+			generate.RandomString(32): []int{seed.Int()},
+			generate.RandomString(32): []int{},
+		}
+	)
+
+	render.SetBool(generate.RandomString(24), false)
+
+	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Append(id.String(), baseID, userID, decisions, render)
+	if have, want := errors.Cause(err), errors.ErrExists; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

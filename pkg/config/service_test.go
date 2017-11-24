@@ -34,11 +34,11 @@ func TestBaseServiceUpdate(t *testing.T) {
 
 func TestUserServiceRender(t *testing.T) {
 	var (
-		clientID   = randString(characterSet)
-		baseID     = randString(characterSet)
-		baseName   = randString(characterSet)
+		clientID   = generate.RandomString(24)
+		baseID     = generate.RandomString(24)
+		baseName   = generate.RandomString(24)
 		baseRender = rendered{
-			randString(characterSet): false,
+			generate.RandomString(24): false,
 		}
 		baseRepo = NewInmemBaseRepo(InmemBaseState{
 			clientID: map[string]BaseConfig{
@@ -50,7 +50,7 @@ func TestUserServiceRender(t *testing.T) {
 				},
 			},
 		})
-		userID   = randString(characterSet)
+		userID   = generate.RandomString(24)
 		userRepo = NewInmemUserRepo()
 		svc      = NewUserService(baseRepo, userRepo)
 	)
@@ -85,10 +85,10 @@ func TestUserServiceRender(t *testing.T) {
 
 func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 	var (
-		clientID = randString(characterSet)
-		baseName = randString(characterSet)
+		clientID = generate.RandomString(24)
+		baseName = generate.RandomString(24)
 		baseRepo = NewInmemBaseRepo(nil)
-		userID   = randString(characterSet)
+		userID   = generate.RandomString(24)
 		userRepo = NewInmemUserRepo()
 		svc      = NewUserService(baseRepo, userRepo)
 	)
