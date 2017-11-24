@@ -167,7 +167,7 @@ func NewPostgresRepo(db *sqlx.DB) Repo {
 	}
 }
 
-func (r *pgRepo) Create(input rule) (rule, error) {
+func (r *pgRepo) Create(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
 		return rule{}, errors.Wrap(err, "marshal buckets")
@@ -210,7 +210,7 @@ func (r *pgRepo) Create(input rule) (rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) GetByName(configID, name string) (rule, error) {
+func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 	query, args, err := r.db.BindNamed(pgRuleGetByName, map[string]interface{}{
 		"configId": configID,
 		"name":     name,
@@ -288,7 +288,7 @@ func (r *pgRepo) GetByName(configID, name string) (rule, error) {
 	}, nil
 }
 
-func (r *pgRepo) UpdateWith(input rule) (rule, error) {
+func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
 		return rule{}, errors.Wrap(err, "marshal buckets")
@@ -334,7 +334,7 @@ func (r *pgRepo) UpdateWith(input rule) (rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) ListAll(configID string) ([]rule, error) {
+func (r *pgRepo) ListAll(configID string) ([]Rule, error) {
 	rows, err := r.db.Queryx(pgRuleListAll)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
@@ -355,7 +355,7 @@ func (r *pgRepo) ListAll(configID string) ([]rule, error) {
 	return buildList(rows)
 }
 
-func (r *pgRepo) ListActive(configID string, now time.Time) ([]rule, error) {
+func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	rows, err := r.db.Queryx(pgRuleListActive, now)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
@@ -376,7 +376,7 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]rule, error) {
 	return buildList(rows)
 }
 
-func buildList(rows *sqlx.Rows) ([]rule, error) {
+func buildList(rows *sqlx.Rows) ([]Rule, error) {
 	rules := []rule{}
 
 	for rows.Next() {

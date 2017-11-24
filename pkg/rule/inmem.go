@@ -7,7 +7,7 @@ import (
 	"github.com/lifesum/configsum/pkg/errors"
 )
 
-type inmemRuleState map[string]map[string]rule
+type inmemRuleState map[string]map[string]Rule
 
 type inmemRepo struct {
 	rules inmemRuleState
@@ -22,31 +22,31 @@ func NewInmemRepo() (Repo, error) {
 	}, nil
 }
 
-func (r *inmemRepo) GetByName(configID, name string) (rule, error) {
+func (r *inmemRepo) GetByName(configID, name string) (Rule, error) {
 	rules, ok := r.rules[configID]
 	if !ok {
-		return rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("config id '%s'", configID))
+		return Rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("config id '%s'", configID))
 	}
 
 	rl, ok := rules[name]
 	if !ok {
-		return rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("rule name '%s'", name))
+		return Rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("rule name '%s'", name))
 	}
 
 	return rl, nil
 }
 
-func (r *inmemRepo) Create(input rule) (rule, error) {
+func (r *inmemRepo) Create(input Rule) (Rule, error) {
 	if _, ok := r.ids[input.id]; ok {
-		return rule{}, errors.Wrap(errors.ErrExists, "id")
+		return Rule{}, errors.Wrap(errors.ErrExists, "id")
 	}
 
 	if _, ok := r.rules[input.configID]; !ok {
-		r.rules[input.configID] = map[string]rule{}
+		r.rules[input.configID] = map[string]Rule{}
 	}
 
 	if _, ok := r.rules[input.configID][input.name]; ok {
-		return rule{}, errors.Wrap(errors.ErrExists, "name")
+		return Rule{}, errors.Wrap(errors.ErrExists, "name")
 	}
 
 	r.rules[input.configID][input.name] = input
@@ -54,13 +54,13 @@ func (r *inmemRepo) Create(input rule) (rule, error) {
 	return r.rules[input.configID][input.name], nil
 }
 
-func (r *inmemRepo) UpdateWith(input rule) (rule, error) {
+func (r *inmemRepo) UpdateWith(input Rule) (Rule, error) {
 	if _, ok := r.rules[input.configID]; !ok {
-		return rule{}, errors.Wrapf(errors.ErrNoRuleForID, ": %s", input.configID)
+		return Rule{}, errors.Wrapf(errors.ErrNoRuleForID, ": %s", input.configID)
 	}
 
 	if _, ok := r.rules[input.configID][input.name]; !ok {
-		return rule{}, errors.Wrapf(errors.ErrNoRuleWithName, ": %s", input.name)
+		return Rule{}, errors.Wrapf(errors.ErrNoRuleWithName, ": %s", input.name)
 	}
 
 	r.rules[input.configID][input.name] = input
@@ -68,13 +68,13 @@ func (r *inmemRepo) UpdateWith(input rule) (rule, error) {
 	return r.rules[input.configID][input.name], nil
 }
 
-func (r *inmemRepo) ListAll(configID string) ([]rule, error) {
+func (r *inmemRepo) ListAll(configID string) ([]Rule, error) {
 	rn, ok := r.rules[configID]
 	if !ok {
-		return []rule{}, nil
+		return []Rule{}, nil
 	}
 
-	rules := []rule{}
+	rules := []Rule{}
 
 	for _, rule := range rn {
 		if !rule.deleted {
@@ -85,13 +85,13 @@ func (r *inmemRepo) ListAll(configID string) ([]rule, error) {
 	return rules, nil
 }
 
-func (r *inmemRepo) ListActive(configID string, now time.Time) ([]rule, error) {
+func (r *inmemRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	rn, ok := r.rules[configID]
 	if !ok {
-		return []rule{}, nil
+		return []Rule{}, nil
 	}
 
-	rules := []rule{}
+	rules := []Rule{}
 
 	for _, rule := range rn {
 		if !rule.deleted &&
