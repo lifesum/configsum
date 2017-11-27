@@ -1,4 +1,4 @@
-module Views.Page exposing (frame)
+module View.Page exposing (frame)
 
 import Html exposing (Attribute, Html, a, div, header, footer, li, main_, nav, span, text, ul)
 import Html.Attributes exposing (class, classList)
@@ -27,9 +27,9 @@ viewHeader route =
             ]
         , nav []
             [ ul []
-                [ navLink route Route.Clients [ text "clients" ]
-                , navLink route Route.Configs [ text "configs" ]
-                , navLink route Route.Rules [ text "rules" ]
+                [ viewNavLink (activeRoute route) Route.Clients [ text "clients" ]
+                , viewNavLink (activeRoute route) Route.Configs [ text "configs" ]
+                , viewNavLink (activeRoute route) Route.Rules [ text "rules" ]
                 ]
             ]
         ]
@@ -40,8 +40,8 @@ viewFooter =
     footer [] []
 
 
-navLink : Route -> Route -> List (Html Msg) -> Html Msg
-navLink activeRoute route content =
+viewNavLink : Route -> Route -> List (Html Msg) -> Html Msg
+viewNavLink activeRoute route content =
     li []
         [ a
             [ classList [ ( "active", activeRoute == route ) ]
@@ -50,6 +50,23 @@ navLink activeRoute route content =
             ]
             content
         ]
+
+
+
+-- ATTRIBUTES
+
+
+activeRoute : Route -> Route
+activeRoute route =
+    case route of
+        Route.ConfigsBase ->
+            Route.Configs
+
+        Route.ConfigBase _ ->
+            Route.Configs
+
+        _ ->
+            route
 
 
 onClickRoute : Route -> Attribute Msg
@@ -63,6 +80,10 @@ onClickRoute route =
             (Json.Decode.field "metaKey" Json.Decode.bool)
             |> andThen (maybePreventDefault (SetRoute route))
         )
+
+
+
+-- HELPER
 
 
 maybePreventDefault : Msg -> Bool -> Decoder Msg

@@ -4,12 +4,11 @@ import Html exposing (Html, a, button, div, form, h1, input, span, table, tbody,
 import Html.Attributes exposing (class, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import Json.Decode as Decode
 import Task exposing (Task)
 import Api.Client as Api
 import Data.Client exposing (Client)
-import Data.Error as Error
 import Page.Errored exposing (PageLoadError, pageLoadError)
+import View.Error
 
 
 -- MDOEL
@@ -69,7 +68,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ h1 [] [ text "Clients" ]
-        , viewError model.error
+        , View.Error.view model.error
         , viewCreate model.formName model.showCreate
         , viewList model.clients
         ]
@@ -102,16 +101,6 @@ viewCreate name showForm =
         div [ class "create" ] [ content ]
 
 
-viewError : Maybe Http.Error -> Html Msg
-viewError error =
-    case error of
-        Just error ->
-            div [ class "error" ] [ text (errorMessage error) ]
-
-        Nothing ->
-            div [] []
-
-
 viewList : List Client -> Html Msg
 viewList clients =
     table []
@@ -131,22 +120,3 @@ viewItem client =
         [ td [] [ text client.name ]
         , td [] [ text client.token ]
         ]
-
-
-
--- HELPER
-
-
-errorMessage : Http.Error -> String
-errorMessage httpError =
-    case httpError of
-        Http.BadStatus response ->
-            case (Decode.decodeString Error.decoder response.body) of
-                Err decodeError ->
-                    decodeError
-
-                Ok error ->
-                    error.reason
-
-        _ ->
-            "Something went wrong!"

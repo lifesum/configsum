@@ -39,6 +39,19 @@ h1 {
 	padding-bottom: 1.6rem;
 }
 
+h2 {
+	border-left: 7rem solid rgba(255, 255, 255, 0.6);
+	font-size: 2rem;
+	font-weight: 300;
+	margin: 1.2rem 0 2rem 0;
+	padding: 0 0 0 0.8rem;
+	text-transform: uppercase;
+}
+
+h1 span.highlight {
+	text-decoration: underline;
+}
+
 div.debug {
 	background: rgb(34, 34, 34);
 	border-top: 0.1rem dashed rgba(255, 255, 255, 0.4);
@@ -46,6 +59,8 @@ div.debug {
 	font-family: 'Roboto Mono', monospace;
 	font-size: 1.2rem;
 	line-height: 1.6em;
+	max-height: 12rem;
+	overflow-y: scroll;
 	padding: 0.8rem;
 	text-align: center;
 }
@@ -184,29 +199,311 @@ main.errored div.error div {
 	padding: 0.8rem;
 }
 
+main section {
+	margin-top: 5rem;
+}
+
+section.meta {
+	display: flex;
+	font-size: 1.6rem;
+}
+
+section.meta div.card {
+	background: rgba(255, 255, 255, 0.6);
+    color: rgb(34, 34, 34);
+    display: flex;
+    flex-direction: column;
+    height: 7.5rem;
+    justify-content: space-between;
+    margin-right: 2.4rem;
+    padding: 1.2rem 0.8rem;
+    min-width: 10rem;
+}
+
+section.meta span {
+	font-weight: 300;
+	text-transform: uppercase;
+}
+
+section.meta strong {
+	font-size: 1.8rem;
+	font-weight: 900;
+}
+
 table {
-	border-collapse: collapse;
+	border-collapse: separate;
 	font-size: 1.6rem;
 	width: 100%;
 }
 
 table thead tr th {
-	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.6);
-	padding: 0 0 0.5em 0.8rem;
+	background: rgba(255, 255, 255, 0.6);
+	color: rgb(34, 34, 34);
+	padding: 1rem 0 0.5em 0.8rem;
 	text-align: left;
 	text-transform: capitalize;
 }
 
+table thead tr th.id {
+	text-transform: uppercase;
+}
+
+table thead tr th.client,
+table thead tr th.name {
+	width: 24rem;
+}
+
+table thead tr th.type {
+	padding-left: 0;
+	text-align: center;
+	width: 10rem;
+}
+
 table tbody tr {
-	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.3);
 	transition: all 0.15s ease;
 }
 
 table tbody tr:hover {
 	background: rgba(255, 255, 255, 0.1);
-	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.1);
+}
+
+table tbody tr.action {
+	cursor: pointer;
 }
 
 table tbody tr td {
-	padding: 2.4rem 1.2rem 1.2rem 0.8rem;
+	border-bottom: 0.1rem solid rgba(255, 255, 255, 0.3);
+	padding-bottom: 1.8rem;
+	padding-left: 0.8rem;
+	padding-top: 1.8rem;
+	transition: all 0.15s ease;
+}
+
+table tbody tr:hover td {
+	border-bottom: 0.1rem solid transparent;
+}
+
+table tbody tr.add,
+table tbody tr.save {
+	cursor: pointer;
+}
+
+table tbody tr.add td.type,
+table tbody tr.save td.type {
+	padding: 2rem 0 1.6rem 0;
+}
+
+table tbody tr.save td.type {
+	background: rgba(238, 255, 170, 0.7);
+}
+
+table tbody tr.save:hover td.type {
+	background: rgba(238, 255, 170, 1);
+	color: rgba(34, 34, 34, 1);
+}
+
+table tbody tr.form td {
+	border-bottom-color: transparent;
+	height: 100%;
+	padding: 0;
+}
+
+
+table tbody tr.form td.name,
+table tbody tr.form td.value {
+	padding-left: 0.8rem;
+}
+
+table tbody tr.form input:not([type='checkbox']) {
+	background: transparent;
+	border: 0;
+	color: rgba(255, 255, 255, 1);
+	outline: 0;
+	padding: 2.4rem 0.8rem 1.2rem 0rem;
+	width: 90%;
+}
+
+table tbody tr.form select {
+	background: rgba(255, 255, 255, 0.3);
+	border: 0;
+	border-radius: 0;
+	color: rgb(34, 34, 34);
+	cursor: pointer;
+	font-weight: 700;
+	outline: 0;
+	padding: 2rem 0 1.6rem 0;
+	text-align: center;
+	text-align-last: center;
+	text-transform: uppercase;
+	transition: all 0.15s ease;
+	width: 100%;
+
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	-ms-appearance: none;
+	-o-appearance: none;
+	appearance: none;
+}
+
+table tbody tr.form select option {
+	text-align: center;
+}
+
+table tbody tr.form:hover select {
+	color: rgba(255, 255, 255, 1);
+}
+
+table tbody tr.form:hover select option {
+	color: rgba(34, 34, 34, 1);
+}
+
+table tbody tr td.type {
+	background: rgba(255, 255, 255, 0.3);
+	border-bottom-color: transparent;
+	color: rgb(34, 34, 34);
+	font-weight: 900;
+	padding-left: 0;
+	text-align: center;
+	text-transform: uppercase;
+	width: 10rem;
+}
+
+table tbody tr:hover td.type {
+	color: rgb(255, 255, 255);
+}
+
+table tbody tr td.type.bool {
+	background: rgb(177, 182, 149);
+}
+
+table tbody tr td.type.number {
+	background: rgb(166, 144, 164);
+}
+
+table tbody tr td.type.numbers {
+	background: rgb(119, 86, 122);
+}
+
+table tbody tr td.type.string {
+	background: rgb(134, 147, 171);
+}
+
+table tbody tr td.type.strings {
+	background: rgb(61, 90, 128);
+}
+
+table tbody tr td.value.bool {
+	padding-bottom: 1.2rem;
+	padding-top: 1.2rem;
+}
+
+table tbody tr td.value span {
+	background: rgba(255, 255, 255, 0.8);
+	color: rgb(34, 34, 34);
+	font-weight: 500;
+	margin-right: 0.3rem;
+	padding: 0.2rem 0.6rem;
+}
+
+table tbody tr td.value span.nc-icon {
+	background: transparent;
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 2rem;
+	padding: 0;
+}
+
+input[type="checkbox"] {
+	display: none;
+}
+
+input[type="checkbox"],
+input[type="checkbox"]:after,
+input[type="checkbox"]:before,
+input[type="checkbox"] *,
+input[type="checkbox"] *:after,
+input[type="checkbox"] *:before,
+input[type="checkbox"] + label {
+	box-sizing: border-box;
+}
+
+input[type="checkbox"]::-moz-selection,
+input[type="checkbox"]:after::-moz-selection,
+input[type="checkbox"]:before::-moz-selection,
+input[type="checkbox"] *::-moz-selection,
+input[type="checkbox"] *:after::-moz-selection,
+input[type="checkbox"] *:before::-moz-selection,
+input[type="checkbox"] + label::-moz-selection {
+	background: none;
+}
+
+input[type="checkbox"]::selection,
+input[type="checkbox"]:after::selection,
+input[type="checkbox"]:before::selection,
+input[type="checkbox"] *::selection,
+input[type="checkbox"] *:after::selection,
+input[type="checkbox"] *:before::selection,
+input[type="checkbox"] + label::selection {
+	background: none;
+}
+
+input[type="checkbox"] + label {
+	cursor: pointer;
+	display: block;
+	height: 3rem;
+	outline: 0;
+	position: relative;
+	width: 5.8rem;
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	    -ms-user-select: none;
+			user-select: none;
+}
+
+input[type="checkbox"]:disabled + label {
+	cursor: auto;
+}
+
+input[type="checkbox"] + label:after,
+input[type="checkbox"] + label:before {
+	content: "";
+	display: block;
+	height: 100%;
+	position: relative;
+	width: 50%;
+}
+
+input[type="checkbox"] + label:after {
+	left: 0;
+}
+
+input[type="checkbox"] + label:before {
+	display: none;
+}
+
+input[type="checkbox"]:checked + label:after {
+	left: 50%;
+}
+
+input[type="checkbox"] + label {
+	background: transparent;
+	border: 0.4rem solid rgba(255, 255, 255, 0.3);
+	padding: 0.4rem;
+	transition: all 0.2s ease;
+	-webkit-transition: all 0.2s ease;
+}
+
+input[type="checkbox"] + label:after {
+	background: rgba(255, 255, 255, 0.3);
+	content: "";
+	transition: all 0.2s ease;
+	-webkit-transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked + label {
+	border: 0.4rem solid rgba(177, 182, 149, 1);
+}
+
+input[type="checkbox"]:checked + label:after {
+	background: rgba(177, 182, 149, 1);
+	left: 50%;
 }

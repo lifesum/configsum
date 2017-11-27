@@ -3,12 +3,14 @@ module Route exposing (Route(..), fromLocation, href, navigate)
 import Html exposing (Attribute)
 import Html.Attributes
 import Navigation exposing (Location, newUrl)
-import UrlParser exposing (Parser, map, oneOf, parsePath, s)
+import UrlParser exposing (Parser, (</>), map, oneOf, parsePath, s, string)
 
 
 type Route
     = Clients
     | Configs
+    | ConfigsBase
+    | ConfigBase String
     | NotFound
     | Rules
 
@@ -19,6 +21,8 @@ routes =
         [ map Clients (s "")
         , map Clients (s "clients")
         , map Configs (s "configs")
+        , map ConfigsBase (s "configs" </> s "base")
+        , map ConfigBase (s "configs" </> s "base" </> string)
         , map Rules (s "rules")
         ]
 
@@ -33,6 +37,12 @@ routeToString route =
 
                 Configs ->
                     [ "configs" ]
+
+                ConfigsBase ->
+                    [ "configs", "base" ]
+
+                ConfigBase id ->
+                    [ "configs", "base", id ]
 
                 NotFound ->
                     [ "not-found" ]

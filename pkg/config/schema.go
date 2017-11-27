@@ -16,7 +16,8 @@ const schemaDefBaseCreate = `
       "type": "string"
     },
     "name": {
-      "type": "string"
+      "type": "string",
+      "pattern": "^([0-9a-z-]+)$"
     }
   }
 }`
@@ -45,7 +46,8 @@ const schemaDefBaseUpdate = `
               "type":"number"
             },
             {
-              "type":"string"
+              "type":"string",
+              "minLength": 1
             }
           ]
         }
@@ -174,6 +176,7 @@ func init() {
 		gojsonschema.NewStringLoader(schemaDefBaseCreate),
 	)
 	if err != nil {
+		panic(err)
 	}
 
 	schemaBaseUpdateRequest, err = gojsonschema.NewSchema(

@@ -4,12 +4,14 @@ import Html exposing (Html, div, footer, h1, text)
 import Html.Attributes exposing (class)
 import Navigation
 import Task
+import Time exposing (Time)
 import Action exposing (Msg(..))
-import Page.Clients as Clients
 import Page.Blank as Blank
+import Page.Clients as Clients
+import Page.Configs as Configs
 import Page.Errored as Errored exposing (PageLoadError)
 import Route exposing (Route, navigate)
-import Views.Page as Page
+import View.Page as Page
 
 
 -- MAIN --
@@ -30,18 +32,21 @@ main =
 
 
 type alias Flags =
-    {}
+    { now : Time
+    }
 
 
 type alias Model =
     { pageState : PageState
     , route : Route
+    , now : Time
     }
 
 
 type Page
     = Blank String
     | Clients Clients.Model
+    | Configs Configs.Model
     | Errored PageLoadError
     | NotFound
 
@@ -52,7 +57,7 @@ type PageState
 
 
 init : Flags -> Navigation.Location -> ( Model, Cmd Msg )
-init _ location =
+init { now } location =
     let
         route =
             case Route.fromLocation location of
@@ -63,14 +68,16 @@ init _ location =
                     route
 
         model =
-            { pageState = Loaded (Blank "Loading"), route = route }
+            Model (Loaded (Blank "Loading")) route now
     in
         setRoute (Route.fromLocation location) model
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.batch []
+    Sub.batch
+        [ Time.every Time.second Tick
+        ]
 
 
 
@@ -97,6 +104,24 @@ update msg model =
             ( ClientsLoaded (Ok subModel), _ ) ->
                 ( { model | pageState = Loaded (Clients subModel) }, Cmd.none )
 
+            ( ClientsMsg subMsg, Clients subModel ) ->
+                toPage Clients ClientsMsg Clients.update subMsg subModel
+
+            ( ConfigsLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( ConfigsLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Configs subModel) }, Cmd.none )
+
+            ( ConfigsMsg subMsg, Configs subModel ) ->
+                toPage Configs ConfigsMsg Configs.update subMsg subModel
+
+            ( ConfigBaseLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( ConfigBaseLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Configs subModel) }, Cmd.none )
+
             ( LoadPage maybeRoute, _ ) ->
                 let
                     route =
@@ -112,11 +137,17 @@ update msg model =
             ( SetRoute route, _ ) ->
                 ( model, navigate route )
 
-            ( Tick _, _ ) ->
-                ( model, Cmd.none )
+            ( Tick now, loadedPage ) ->
+                let
+                    newPage =
+                        case loadedPage of
+                            Configs configsModel ->
+                                Configs ({ configsModel | now = now })
 
-            ( ClientsMsg subMsg, Clients subModel ) ->
-                toPage Clients ClientsMsg Clients.update subMsg subModel
+                            _ ->
+                                loadedPage
+                in
+                    ( { model | pageState = (Loaded newPage), now = now }, Cmd.none )
 
             ( _, NotFound ) ->
                 ( model, Cmd.none )
@@ -132,10 +163,22 @@ setRoute maybeRoute model =
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
         Just Route.Clients ->
-            ( { model | pageState = TransitioningFrom (getPage model.pageState) }, Task.attempt ClientsLoaded Clients.init )
+            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
+            , Task.attempt ClientsLoaded Clients.init
+            )
 
         Just Route.Configs ->
-            ( { model | pageState = Loaded (Blank "Configs") }, Cmd.none )
+            ( model, navigate Route.ConfigsBase )
+
+        Just Route.ConfigsBase ->
+            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
+            , Task.attempt ConfigsLoaded (Configs.init model.now)
+            )
+
+        Just (Route.ConfigBase id) ->
+            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
+            , Task.attempt ConfigBaseLoaded (Configs.initBase model.now id)
+            )
 
         Just Route.NotFound ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
@@ -184,6 +227,11 @@ viewPage isLoading page route =
                 Clients.view subModel
                     |> Html.map ClientsMsg
                     |> frame "clients"
+
+            Configs subModel ->
+                Configs.view subModel
+                    |> Html.map ConfigsMsg
+                    |> frame "configs"
 
             Errored error ->
                 Errored.view error

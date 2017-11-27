@@ -77,8 +77,7 @@ const (
 			parameters = :parameters,
 			updated_at = :updatedAt
 		WHERE
-			id = :id
-	`
+			id = :id`
 
 	pgUserCreateTable = `
 		CREATE TABLE IF NOT EXISTS config.users(
@@ -217,6 +216,7 @@ func (r *pgBaseRepo) GetByID(id string) (BaseConfig, error) {
 		Name:       raw.Name,
 		Parameters: params,
 		CreatedAt:  raw.CreatedAt,
+		UpdatedAt:  raw.UpdatedAt,
 	}, nil
 }
 
@@ -331,7 +331,7 @@ func (r *pgBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 		return BaseConfig{}, errors.Wrap(err, "marshal parameters")
 	}
 
-	updatedAt := time.Now()
+	updatedAt := time.Now().UTC()
 
 	res, err := r.db.NamedExec(pgBaseUpdate, map[string]interface{}{
 		"id":         c.ID,
@@ -451,7 +451,7 @@ func (r *pgUserRepo) Append(
 		id:        id,
 		userID:    userID,
 		rendered:  render,
-		createdAt: time.Now(),
+		createdAt: time.Now().UTC(),
 	}, nil
 }
 
