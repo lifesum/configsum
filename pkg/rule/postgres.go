@@ -170,12 +170,12 @@ func NewPostgresRepo(db *sqlx.DB) Repo {
 func (r *pgRepo) Create(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
-		return rule{}, errors.Wrap(err, "marshal buckets")
+		return Rule{}, errors.Wrap(err, "marshal buckets")
 	}
 
 	rawCriteria, err := json.Marshal(input.criteria)
 	if err != nil {
-		return rule{}, errors.Wrap(err, "marshal criteria")
+		return Rule{}, errors.Wrap(err, "marshal criteria")
 	}
 
 	_, err = r.db.NamedExec(pgRuleInsert, map[string]interface{}{
@@ -195,15 +195,15 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrDuplicateKey:
-			return rule{}, errors.Wrap(errors.ErrExists, "rule")
+			return Rule{}, errors.Wrap(errors.ErrExists, "rule")
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
-				return rule{}, err
+				return Rule{}, err
 			}
 
 			return r.Create(input)
 		default:
-			return rule{}, fmt.Errorf("named exec: %s", err)
+			return Rule{}, fmt.Errorf("named exec: %s", err)
 		}
 	}
 
@@ -216,7 +216,7 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		"name":     name,
 	})
 	if err != nil {
-		return rule{}, fmt.Errorf("named query: %s", err)
+		return Rule{}, fmt.Errorf("named query: %s", err)
 	}
 
 	raw := struct {
@@ -241,28 +241,28 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
-				return rule{}, err
+				return Rule{}, err
 			}
 
 			return r.GetByName(configID, name)
 		case sql.ErrNoRows:
-			return rule{}, errors.Wrap(errors.ErrNotFound, "get rule")
+			return Rule{}, errors.Wrap(errors.ErrNotFound, "get rule")
 
 		default:
-			return rule{}, fmt.Errorf("get: %s", err)
+			return Rule{}, fmt.Errorf("get: %s", err)
 		}
 	}
 
 	buckets := []bucket{}
 
 	if err := json.Unmarshal(raw.Buckets, &buckets); err != nil {
-		return rule{}, errors.Wrap(err, "unmarshal buckets")
+		return Rule{}, errors.Wrap(err, "unmarshal buckets")
 	}
 
 	criteria := criteria{}
 
 	if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
-		return rule{}, errors.Wrap(err, "unmarshal criteria")
+		return Rule{}, errors.Wrap(err, "unmarshal criteria")
 	}
 
 	var activatedAt time.Time
@@ -270,7 +270,7 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		activatedAt = (raw.ActivatedAt).Time
 	}
 
-	return rule{
+	return Rule{
 		id:          raw.ID,
 		active:      raw.Active,
 		activatedAt: activatedAt,
@@ -291,12 +291,12 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
-		return rule{}, errors.Wrap(err, "marshal buckets")
+		return Rule{}, errors.Wrap(err, "marshal buckets")
 	}
 
 	rawCriteria, err := json.Marshal(input.criteria)
 	if err != nil {
-		return rule{}, errors.Wrap(err, "marshal criteria")
+		return Rule{}, errors.Wrap(err, "marshal criteria")
 	}
 
 	_, err = r.db.NamedExec(pgRuleUpdate, map[string]interface{}{
@@ -319,15 +319,15 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
-				return rule{}, err
+				return Rule{}, err
 			}
 
 			return r.UpdateWith(input)
 		case sql.ErrNoRows:
-			return rule{}, errors.Wrap(errors.ErrNotFound, "update rule")
+			return Rule{}, errors.Wrap(errors.ErrNotFound, "update rule")
 
 		default:
-			return rule{}, fmt.Errorf("update named exec: %s", err)
+			return Rule{}, fmt.Errorf("update named exec: %s", err)
 		}
 	}
 
@@ -340,15 +340,15 @@ func (r *pgRepo) ListAll(configID string) ([]Rule, error) {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
-				return []rule{}, err
+				return []Rule{}, err
 			}
 
 			return r.ListAll(configID)
 		case sql.ErrNoRows:
-			return []rule{}, errors.Wrap(errors.ErrNotFound, "list all rules")
+			return []Rule{}, errors.Wrap(errors.ErrNotFound, "list all rules")
 
 		default:
-			return []rule{}, fmt.Errorf("list all rules: %s", err)
+			return []Rule{}, fmt.Errorf("list all rules: %s", err)
 		}
 	}
 
@@ -361,15 +361,15 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
 			if err := r.setup(); err != nil {
-				return []rule{}, err
+				return []Rule{}, err
 			}
 
 			return r.ListAll(configID)
 		case sql.ErrNoRows:
-			return []rule{}, errors.Wrap(errors.ErrNotFound, "list all active rules")
+			return []Rule{}, errors.Wrap(errors.ErrNotFound, "list all active rules")
 
 		default:
-			return []rule{}, fmt.Errorf("list all active rules: %s", err)
+			return []Rule{}, fmt.Errorf("list all active rules: %s", err)
 		}
 	}
 
@@ -377,7 +377,7 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 }
 
 func buildList(rows *sqlx.Rows) ([]Rule, error) {
-	rules := []rule{}
+	rules := []Rule{}
 
 	for rows.Next() {
 		raw := struct {
@@ -398,19 +398,19 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 
 		err := rows.StructScan(&raw)
 		if err != nil {
-			return []rule{}, fmt.Errorf("scan rule: %s", err)
+			return []Rule{}, fmt.Errorf("scan rule: %s", err)
 		}
 
 		buckets := []bucket{}
 
 		if err := json.Unmarshal(raw.Buckets, &buckets); err != nil {
-			return []rule{}, errors.Wrap(err, "unmarshal buckets in rule scan")
+			return []Rule{}, errors.Wrap(err, "unmarshal buckets in rule scan")
 		}
 
 		criteria := criteria{}
 
 		if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
-			return []rule{}, errors.Wrap(err, "unmarshal criteria in rule scan")
+			return []Rule{}, errors.Wrap(err, "unmarshal criteria in rule scan")
 		}
 
 		var activatedAt time.Time
@@ -418,7 +418,7 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			activatedAt = (raw.ActivatedAt).Time
 		}
 
-		rules = append(rules, rule{
+		rules = append(rules, Rule{
 			id:          raw.ID,
 			active:      raw.Active,
 			activatedAt: activatedAt,

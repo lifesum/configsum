@@ -14,12 +14,12 @@ type inmemRepo struct {
 	ids   map[string]struct{}
 }
 
-// NewInmemRepo returns an in-memory backed Repo implementation.
-func NewInmemRepo() (Repo, error) {
+// NewInmemRuleRepo returns an in-memory backed Repo implementation.
+func NewInmemRuleRepo() Repo {
 	return &inmemRepo{
 		rules: inmemRuleState{},
 		ids:   map[string]struct{}{},
-	}, nil
+	}
 }
 
 func (r *inmemRepo) GetByName(configID, name string) (Rule, error) {

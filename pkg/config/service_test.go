@@ -6,6 +6,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 func TestBaseServiceUpdate(t *testing.T) {
@@ -52,7 +53,8 @@ func TestUserServiceRender(t *testing.T) {
 		})
 		userID   = generate.RandomString(24)
 		userRepo = NewInmemUserRepo()
-		svc      = NewUserService(baseRepo, userRepo)
+		ruleRepo = rule.NewInmemRuleRepo()
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
 
 	uc, err := svc.Render(clientID, baseName, userID)
@@ -90,7 +92,8 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 		baseRepo = NewInmemBaseRepo(nil)
 		userID   = generate.RandomString(24)
 		userRepo = NewInmemUserRepo()
-		svc      = NewUserService(baseRepo, userRepo)
+		ruleRepo = rule.NewInmemRuleRepo()
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
 
 	_, err := svc.Render(clientID, baseName, userID)

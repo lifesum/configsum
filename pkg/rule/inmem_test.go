@@ -39,10 +39,5 @@ func TesstInmemRepoListDeleted(t *testing.T) {
 }
 
 func prepareInmemRepo(t *testing.T) Repo {
-	r, err := NewInmemRepo()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return r
+	return NewInmemRuleRepo()
 }

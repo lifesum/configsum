@@ -38,7 +38,7 @@ func TestRule(t *testing.T) {
 			"feature_y": false,
 		}
 		overrideKind = kindOverride
-		r            = rule{
+		r            = Rule{
 			criteria: &criteria{
 				User: &criteriaUser{
 					ID: &matcherListString{
@@ -734,8 +734,8 @@ func generateRule(
 	startTime, endTime time.Time,
 	buckets []bucket,
 	criteria *criteria,
-) rule {
-	return rule{
+) Rule {
+	return Rule{
 		active:      active,
 		buckets:     buckets,
 		configID:    configID,
