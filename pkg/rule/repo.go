@@ -34,14 +34,18 @@ type contextUser struct {
 type Repo interface {
 	lifecycle
 
-	Create(input rule) (rule, error)
-	GetByName(configID, name string) (rule, error)
-	UpdateWith(input rule) (rule, error)
-	ListAll(configID string) ([]rule, error)
-	ListActive(configID string, now time.Time) ([]rule, error)
+	Create(input Rule) (Rule, error)
+	GetByName(configID, name string) (Rule, error)
+	UpdateWith(input Rule) (Rule, error)
+	ListAll(configID string) ([]Rule, error)
+	ListActive(configID string, now time.Time) ([]Rule, error)
 }
 
-type rule struct {
+// RepoMiddleware is a chainable behaviour modifier for Repo.
+type RepoMiddleware func(Repo) Repo
+
+// Rule facilitates the overide of base configs with consumer provided parameters.
+type Rule struct {
 	active      bool
 	activatedAt time.Time
 	buckets     []bucket
@@ -63,7 +67,7 @@ type lifecycle interface {
 	teardown() error
 }
 
-func (r rule) validate() (bool, error) {
+func (r Rule) validate() (bool, error) {
 	if r.buckets == nil {
 		return false, errors.Wrap(errors.ErrInvalidRule, "missing buckets attribute")
 	}
@@ -99,7 +103,7 @@ func (r rule) validate() (bool, error) {
 	return true, nil
 }
 
-func (r rule) run(input parameters, ctx context) (parameters, error) {
+func (r Rule) run(input parameters, ctx context) (parameters, error) {
 	if r.criteria.User != nil {
 		if r.criteria.User.Age != nil {
 			return nil, errors.New("matching user age not implemented")

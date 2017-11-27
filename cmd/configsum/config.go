@@ -20,6 +20,7 @@ import (
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
 	"github.com/lifesum/configsum/pkg/instrument"
+	"github.com/lifesum/configsum/pkg/rule"
 	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 )
 
@@ -129,12 +130,19 @@ func runConfig(args []string, logger log.Logger) error {
 	)(tokenRepo)
 	tokenRepo = client.NewTokenRepoLogMiddleware(logger, storeRepo)(tokenRepo)
 
+	ruleRepo := rule.NewPostgresRepo(db)
+	ruleRepo = rule.NewRuleRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConfig),
+		storeRepo,
+	)(ruleRepo)
+	ruleRepo = rule.NewRuleRepoLogMiddleware(logger, storeRepo)(ruleRepo)
+
 	// Setup service.
 	var (
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
 		clientSVC    = client.NewService(clientRepo, tokenRepo)
-		svc          = config.NewUserService(baseRepo, userRepo)
+		svc          = config.NewUserService(baseRepo, userRepo, ruleRepo)
 		opts         = []kithttp.ServerOption{
 			kithttp.ServerBefore(kithttp.PopulateRequestContext),
 			kithttp.ServerBefore(confhttp.PopulateRequestContext),

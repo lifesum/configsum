@@ -9,6 +9,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 // BaseService provides base configs.
@@ -91,14 +92,16 @@ type UserService interface {
 type userService struct {
 	baseRepo BaseRepo
 	userRepo UserRepo
+	ruleRepo rule.Repo
 	seed     *rand.Rand
 }
 
 // NewUserService provides user specific configs.
-func NewUserService(baseRepo BaseRepo, userRepo UserRepo) UserService {
+func NewUserService(baseRepo BaseRepo, userRepo UserRepo, ruleRepo rule.Repo) UserService {
 	return &userService{
 		baseRepo: baseRepo,
 		userRepo: userRepo,
+		ruleRepo: ruleRepo,
 		seed:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
