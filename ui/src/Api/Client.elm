@@ -12,4 +12,4 @@ create name =
 
 list : Http.Request (List Client)
 list =
-    Http.get "/api/clients/" (Decode.field "clients" (Decode.list decoder))
+    Http.get "api/clients/" (Decode.field "clients" (Decode.list decoder))

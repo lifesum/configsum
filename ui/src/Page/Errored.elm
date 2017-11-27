@@ -12,8 +12,7 @@ type PageLoadError
 view : PageLoadError -> Html msg
 view (PageLoadError page err) =
     div []
-        [ h1 [] [ text page ]
-        , unpackError err
+        [ unpackError err
         ]
 
 
@@ -28,6 +27,12 @@ unpackError err =
         Http.BadPayload debug res ->
             div [ class "error" ]
                 [ h2 [] [ text debug ]
+                , div [] [ text (toString res) ]
+                ]
+
+        Http.BadStatus res ->
+            div [ class "error" ]
+                [ h2 [] [ text "Entity not found" ]
                 , div [] [ text (toString res) ]
                 ]
 

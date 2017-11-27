@@ -166,5 +166,13 @@ License - nucleoapp.com/license/
     content: "\ea02";
 }
 
+.nc-check-square-09::before {
+    content: "\ea03";
+}
+
+.nc-square-delete-10::before {
+    content: "\ea04";
+}
+
 
 /* all icon font classes list here */

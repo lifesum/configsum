@@ -13,7 +13,7 @@ const tmplIndex = `<!DOCTYPE html>
   <head>
     <meta charset="utf-8">
     <base href="{{ .Base }}">
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto:300,400,500,700" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono|Roboto:300,400,500,700,900" rel="stylesheet">
     <link href="styles/nucleo.css" rel="stylesheet">
     <link href="styles/normalize.css" rel="stylesheet">
     <link href="styles/console.css" rel="stylesheet">
@@ -21,7 +21,7 @@ const tmplIndex = `<!DOCTYPE html>
   </head>
   <body>
     <script type="text/javascript">
-		var app = Elm.Main.fullscreen();
+		var app = Elm.Main.fullscreen({"now": (new Date()).getTime()});
     </script>
  </body>
 </html>`
