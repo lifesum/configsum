@@ -26,6 +26,7 @@ const (
 			deleted BOOLEAN NOT NULL DEFAULT FALSE,
 			kind INT8 NOT NULL,
 			name TEXT NOT NULL,
+			rollout INT8 NOT NULL,
 			activated_at TIMESTAMP WITHOUT TIME ZONE,
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc'),
 			end_time TIMESTAMP WITHOUT TIME ZONE,
@@ -47,6 +48,7 @@ const (
 			end_time,
 			kind,
 			name,
+			rollout,
 			start_time,
 			updated_at)
 			VALUES(
@@ -60,6 +62,7 @@ const (
 				:endTime,
 				:kind,
 				:name,
+				:rollout,
 				:startTime,
 				:updatedAt
 		)`
@@ -78,6 +81,7 @@ const (
 			end_time,
 			kind,
 			name,
+			rollout,
 			start_time,
 			updated_at
 		FROM
@@ -103,6 +107,7 @@ const (
 			end_time = :endTime,
 			kind = :kind,
 			name = :name,
+			rollout = :rollout,
 			start_time = :startTime,
 			updated_at = :updatedAt
 		WHERE
@@ -123,6 +128,7 @@ const (
 			end_time,
 			kind,
 			name,
+			rollout,
 			start_time,
 			updated_at
 		FROM
@@ -143,6 +149,7 @@ const (
 			end_time,
 			kind,
 			name,
+			rollout,
 			start_time,
 			updated_at
 		FROM
@@ -183,6 +190,9 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 		return Rule{}, errors.Wrap(err, "marshal criteria")
 	}
 
+	input.createdAt = input.createdAt.UTC()
+	input.updatedAt = time.Now().UTC()
+
 	args := map[string]interface{}{
 		"id":          input.ID,
 		"active":      input.active,
@@ -194,8 +204,9 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 		"endTime":     input.endTime,
 		"kind":        input.kind,
 		"name":        input.name,
+		"rollout":     input.rollout,
 		"startTime":   input.startTime,
-		"updatedAt":   time.Now().UTC(),
+		"updatedAt":   input.updatedAt,
 	}
 
 	if input.endTime.IsZero() {
@@ -247,6 +258,7 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		EndTime     pq.NullTime `db:"end_time"`
 		Kind        Kind        `db:"kind"`
 		Name        string      `db:"name"`
+		Rollout     uint8       `db:"rollout"`
 		StartTime   pq.NullTime `db:"start_time"`
 		UpdatedAt   time.Time   `db:"updated_at"`
 	}{}
@@ -301,15 +313,16 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		activatedAt: activatedAt,
 		buckets:     buckets,
 		configID:    raw.ConfigID,
-		createdAt:   raw.CreatedAt,
+		createdAt:   raw.CreatedAt.UTC(),
 		criteria:    &criteria,
 		description: raw.Description,
 		deleted:     raw.Deleted,
 		endTime:     endTime,
 		kind:        raw.Kind,
 		name:        raw.Name,
+		rollout:     raw.Rollout,
 		startTime:   startTime,
-		updatedAt:   raw.UpdatedAt,
+		updatedAt:   raw.UpdatedAt.UTC(),
 	}, nil
 }
 
@@ -337,6 +350,7 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 		"endTime":     input.endTime,
 		"kind":        input.kind,
 		"name":        input.name,
+		"rollout":     input.rollout,
 		"startTime":   input.startTime,
 		"updatedAt":   time.Now().UTC(),
 	})
@@ -397,7 +411,7 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 				return []Rule{}, err
 			}
 
-			return r.ListAll()
+			return r.ListActive(configID, now)
 		case sql.ErrNoRows:
 			return []Rule{}, errors.Wrap(errors.ErrNotFound, "list all active rules")
 
@@ -425,6 +439,7 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			EndTime     pq.NullTime `db:"end_time"`
 			Kind        Kind        `db:"kind"`
 			Name        string      `db:"name"`
+			Rollout     uint8       `db:"rollout"`
 			StartTime   pq.NullTime `db:"start_time"`
 			UpdatedAt   time.Time   `db:"updated_at"`
 		}{}
@@ -473,6 +488,7 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			endTime:     endTime,
 			kind:        raw.Kind,
 			name:        raw.Name,
+			rollout:     raw.Rollout,
 			startTime:   startTime,
 			updatedAt:   raw.UpdatedAt,
 		})
