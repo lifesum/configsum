@@ -10,6 +10,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/pg"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 const (
@@ -131,7 +132,7 @@ func NewPostgresBaseRepo(db *sqlx.DB) BaseRepo {
 
 func (r *pgBaseRepo) Create(
 	id, clientID, name string,
-	parameters rendered,
+	parameters rule.Parameters,
 ) (BaseConfig, error) {
 	rawParameters, err := json.Marshal(parameters)
 	if err != nil {
@@ -204,7 +205,7 @@ func (r *pgBaseRepo) GetByID(id string) (BaseConfig, error) {
 		}
 	}
 
-	params := rendered{}
+	params := rule.Parameters{}
 
 	if err := json.Unmarshal(raw.Parameters, &params); err != nil {
 		return BaseConfig{}, errors.Wrap(err, "unmarshal parameters")
@@ -257,7 +258,7 @@ func (r *pgBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
 		}
 	}
 
-	params := rendered{}
+	params := rule.Parameters{}
 
 	if err := json.Unmarshal(raw.Parameters, &params); err != nil {
 		return BaseConfig{}, errors.Wrap(err, "unmarshal parameters")
@@ -411,8 +412,8 @@ func NewPostgresUserRepo(db *sqlx.DB) UserRepo {
 
 func (r *pgUserRepo) Append(
 	id, baseID, userID string,
-	decisions ruleDecisions,
-	render rendered,
+	decisions rule.Decisions,
+	render rule.Parameters,
 ) (UserConfig, error) {
 	rawRendered, err := json.Marshal(render)
 	if err != nil {
@@ -490,13 +491,13 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 		}
 	}
 
-	render := rendered{}
+	render := rule.Parameters{}
 
 	if err := json.Unmarshal(raw.Rendered, &render); err != nil {
 		return UserConfig{}, errors.Wrap(err, "unmarshal rendered")
 	}
 
-	decisions := ruleDecisions{}
+	decisions := rule.Decisions{}
 
 	if err := json.Unmarshal(raw.RuleDecisions, &decisions); err != nil {
 		return UserConfig{}, errors.Wrap(err, "unmarshal decisons")

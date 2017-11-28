@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 // Log fields.
@@ -47,7 +49,7 @@ func NewBaseRepoLogMiddleware(logger log.Logger, store string) BaseRepoMiddlewar
 
 func (r *logBaseRepo) Create(
 	id, clientID, name string,
-	parameters rendered,
+	parameters rule.Parameters,
 ) (c BaseConfig, err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
@@ -197,8 +199,8 @@ func NewUserRepoLogMiddleware(logger log.Logger, store string) UserRepoMiddlewar
 
 func (r *logUserRepo) Append(
 	id, baseID, userID string,
-	decisions ruleDecisions,
-	render rendered,
+	decisions rule.Decisions,
+	render rule.Parameters,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{

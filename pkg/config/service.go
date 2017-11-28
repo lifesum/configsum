@@ -17,7 +17,7 @@ type BaseService interface {
 	Create(clientID, name string) (BaseConfig, error)
 	Get(id string) (BaseConfig, error)
 	List() ([]BaseConfig, error)
-	Update(id string, parameters rendered) (BaseConfig, error)
+	Update(id string, parameters rule.Parameters) (BaseConfig, error)
 }
 
 type baseService struct {
@@ -62,7 +62,7 @@ func (s *baseService) List() ([]BaseConfig, error) {
 	return cs, nil
 }
 
-func (s *baseService) Update(id string, params rendered) (BaseConfig, error) {
+func (s *baseService) Update(id string, params rule.Parameters) (BaseConfig, error) {
 	bc, err := s.baseRepo.GetByID(id)
 	if err != nil {
 		return BaseConfig{}, err
@@ -86,7 +86,7 @@ func (s *baseService) Update(id string, params rendered) (BaseConfig, error) {
 
 // UserService provides user specific configs.
 type UserService interface {
-	Render(clientID, baseName, userID string) (UserConfig, error)
+	Render(clientID, baseName, userID string, ctx userRenderContext) (UserConfig, error)
 }
 
 type userService struct {
@@ -106,7 +106,10 @@ func NewUserService(baseRepo BaseRepo, userRepo UserRepo, ruleRepo rule.Repo) Us
 	}
 }
 
-func (s *userService) Render(clientID, baseName, userID string) (UserConfig, error) {
+func (s *userService) Render(
+	clientID, baseName, userID string,
+	ctx userRenderContext,
+) (UserConfig, error) {
 	bc, err := s.baseRepo.GetByName(clientID, baseName)
 	if err != nil {
 		return UserConfig{}, errors.Wrap(err, "baseRepo.Get")
@@ -122,9 +125,38 @@ func (s *userService) Render(clientID, baseName, userID string) (UserConfig, err
 		}
 	}
 
-	// TODO(nabilm): Create temp config with rules applied
+	rs, err := s.ruleRepo.ListActive(bc.ID, time.Now())
+	if err != nil {
+		return UserConfig{}, err
+	}
 
-	if reflect.DeepEqual(bc.Parameters, uc.rendered) {
+	var (
+		decisions = rule.Decisions{}
+		params    = rule.Parameters(bc.Parameters)
+	)
+
+	for _, r := range rs {
+		ctx := rule.Context{
+			User: rule.ContextUser{
+				ID: userID,
+			},
+		}
+
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID])
+		if err != nil {
+			switch errors.Cause(err) {
+			case errors.ErrRuleNoMatch:
+				continue
+			default:
+				return UserConfig{}, err
+			}
+		}
+
+		decisions[r.ID] = d
+		params = pm
+	}
+
+	if reflect.DeepEqual(params, uc.rendered) {
 		return uc, nil
 	}
 
@@ -133,14 +165,14 @@ func (s *userService) Render(clientID, baseName, userID string) (UserConfig, err
 		return UserConfig{}, errors.Wrap(err, "create ulid")
 	}
 
-	return s.userRepo.Append(id.String(), bc.ID, userID, nil, bc.Parameters)
+	return s.userRepo.Append(id.String(), bc.ID, userID, decisions, params)
 }
 
 // validateParamDelta given a base and the new version of the parameters
 // returns an error if:
 // * a key from base is missing in the new version
 // * the type of a key was changed
-func validateParamDelta(base, new rendered) error {
+func validateParamDelta(base, new rule.Parameters) error {
 	for key, val := range base {
 		v, ok := new[key]
 		if !ok {

@@ -18,6 +18,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 const (
@@ -119,7 +120,7 @@ func TestDecodeBaseUpdateRequest(t *testing.T) {
 
 	want := baseUpdateRequest{
 		id: id.String(),
-		parameters: rendered{
+		parameters: rule.Parameters{
 			"feature_decode_toggled": true,
 		},
 	}

@@ -20,7 +20,7 @@ const (
 			id TEXT NOT NULL PRIMARY KEY,
 			active BOOLEAN NOT NULL DEFAULT FALSE,
 			buckets JSONB NOT NULL,
-			config_id TEXT NOT NULL,	
+			config_id TEXT NOT NULL,
 			criteria JSONB NOT NULL,
 			description TEXT NOT NULL,
 			deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -37,18 +37,18 @@ const (
 	pgRuleInsert = `
 		INSERT INTO
 		rule.rules(
-			id, 
-			active, 
-			buckets, 
-			config_id, 
-			created_at, 
-			criteria, 
+			id,
+			active,
+			buckets,
+			config_id,
+			created_at,
+			criteria,
 			description,
 			end_time,
 			kind,
 			name,
-			start_time, 
-			updated_at) 
+			start_time,
+			updated_at)
 			VALUES(
 				:id,
 				:active,
@@ -66,24 +66,24 @@ const (
 
 	pgRuleGetByName = `
 		SELECT
-			id, 
-			active, 
-			activated_at, 
-			buckets, 
-			config_id, 
-			created_at, 
-			criteria, 
-			description, 
+			id,
+			active,
+			activated_at,
+			buckets,
+			config_id,
+			created_at,
+			criteria,
+			description,
 			deleted,
-			end_time, 
-			kind, 
-			name, 
-			start_time, 
+			end_time,
+			kind,
+			name,
+			start_time,
 			updated_at
 		FROM
 			rule.rules
 		WHERE
-			config_id = :configId	
+			config_id = :configId
 			AND name = :name
 			AND deleted = false
 		ORDER BY
@@ -111,49 +111,54 @@ const (
 	`
 
 	pgRuleListAll = `
-		SELECT 		
-			id, 
-			active, 
-			activated_at, 
-			buckets, 
-			config_id, 
-			created_at, 
-			criteria, 
-			description, 
-			end_time, 
-			kind, 
-			name, 
-			start_time, 
+		SELECT
+			id,
+			active,
+			activated_at,
+			buckets,
+			config_id,
+			created_at,
+			criteria,
+			description,
+			end_time,
+			kind,
+			name,
+			start_time,
 			updated_at
 		FROM
 			rule.rules
 		WHERE
-			deleted = false
-	`
+			deleted = false`
 
 	pgRuleListActive = `
-		SELECT	
-			id, 
-			active, 
-			activated_at, 
-			buckets, 
-			config_id, 
-			created_at, 
-			criteria, 
-			description, 
-			end_time, 
-			kind, 
-			name, 
-			start_time, 
+		SELECT
+			id,
+			active,
+			activated_at,
+			buckets,
+			config_id,
+			created_at,
+			criteria,
+			description,
+			end_time,
+			kind,
+			name,
+			start_time,
 			updated_at
 		FROM
 			rule.rules
 		WHERE
 			active = true
-			AND start_time <= $1
-			AND end_time > $1
+			AND config_id = :configId
 			AND deleted = false
-	`
+			AND (
+				end_time IS NULL
+				OR end_time >= :now
+			)
+			AND (
+				start_time IS NULL
+				OR start_time <= :now
+			)`
 )
 
 type pgRepo struct {
@@ -178,8 +183,8 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 		return Rule{}, errors.Wrap(err, "marshal criteria")
 	}
 
-	_, err = r.db.NamedExec(pgRuleInsert, map[string]interface{}{
-		"id":          input.id,
+	args := map[string]interface{}{
+		"id":          input.ID,
 		"active":      input.active,
 		"buckets":     rawBuckets,
 		"configId":    input.configID,
@@ -191,7 +196,17 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 		"name":        input.name,
 		"startTime":   input.startTime,
 		"updatedAt":   time.Now().UTC(),
-	})
+	}
+
+	if input.endTime.IsZero() {
+		args["endTime"] = nil
+	}
+
+	if input.startTime.IsZero() {
+		args["startTime"] = nil
+	}
+
+	_, err = r.db.NamedExec(pgRuleInsert, args)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrDuplicateKey:
@@ -229,10 +244,10 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		Criteria    []byte      `db:"criteria"`
 		Description string      `db:"description"`
 		Deleted     bool        `db:"deleted"`
-		EndTime     time.Time   `db:"end_time"`
-		Kind        kind        `db:"kind"`
+		EndTime     pq.NullTime `db:"end_time"`
+		Kind        Kind        `db:"kind"`
 		Name        string      `db:"name"`
-		StartTime   time.Time   `db:"start_time"`
+		StartTime   pq.NullTime `db:"start_time"`
 		UpdatedAt   time.Time   `db:"updated_at"`
 	}{}
 
@@ -253,13 +268,13 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		}
 	}
 
-	buckets := []bucket{}
+	buckets := []Bucket{}
 
 	if err := json.Unmarshal(raw.Buckets, &buckets); err != nil {
 		return Rule{}, errors.Wrap(err, "unmarshal buckets")
 	}
 
-	criteria := criteria{}
+	criteria := Criteria{}
 
 	if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
 		return Rule{}, errors.Wrap(err, "unmarshal criteria")
@@ -270,8 +285,18 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		activatedAt = (raw.ActivatedAt).Time
 	}
 
+	var endTime time.Time
+	if raw.EndTime.Valid {
+		endTime = (raw.EndTime).Time
+	}
+
+	var startTime time.Time
+	if raw.StartTime.Valid {
+		startTime = (raw.StartTime).Time
+	}
+
 	return Rule{
-		id:          raw.ID,
+		ID:          raw.ID,
 		active:      raw.Active,
 		activatedAt: activatedAt,
 		buckets:     buckets,
@@ -280,10 +305,10 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		criteria:    &criteria,
 		description: raw.Description,
 		deleted:     raw.Deleted,
-		endTime:     raw.EndTime,
+		endTime:     endTime,
 		kind:        raw.Kind,
 		name:        raw.Name,
-		startTime:   raw.StartTime,
+		startTime:   startTime,
 		updatedAt:   raw.UpdatedAt,
 	}, nil
 }
@@ -300,7 +325,7 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 	}
 
 	_, err = r.db.NamedExec(pgRuleUpdate, map[string]interface{}{
-		"id":          input.id,
+		"id":          input.ID,
 		"active":      input.active,
 		"activatedAt": input.activatedAt,
 		"configId":    input.configID,
@@ -334,7 +359,7 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) ListAll(configID string) ([]Rule, error) {
+func (r *pgRepo) ListAll() ([]Rule, error) {
 	rows, err := r.db.Queryx(pgRuleListAll)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
@@ -343,7 +368,7 @@ func (r *pgRepo) ListAll(configID string) ([]Rule, error) {
 				return []Rule{}, err
 			}
 
-			return r.ListAll(configID)
+			return r.ListAll()
 		case sql.ErrNoRows:
 			return []Rule{}, errors.Wrap(errors.ErrNotFound, "list all rules")
 
@@ -356,7 +381,15 @@ func (r *pgRepo) ListAll(configID string) ([]Rule, error) {
 }
 
 func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
-	rows, err := r.db.Queryx(pgRuleListActive, now)
+	query, args, err := r.db.BindNamed(pgRuleListActive, map[string]interface{}{
+		"configId": configID,
+		"now":      now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("named query: %s", err)
+	}
+
+	rows, err := r.db.Queryx(query, args...)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
@@ -364,7 +397,7 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 				return []Rule{}, err
 			}
 
-			return r.ListAll(configID)
+			return r.ListAll()
 		case sql.ErrNoRows:
 			return []Rule{}, errors.Wrap(errors.ErrNotFound, "list all active rules")
 
@@ -389,10 +422,10 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			CreatedAt   time.Time   `db:"created_at"`
 			Criteria    []byte      `db:"criteria"`
 			Description string      `db:"description"`
-			EndTime     time.Time   `db:"end_time"`
-			Kind        kind        `db:"kind"`
+			EndTime     pq.NullTime `db:"end_time"`
+			Kind        Kind        `db:"kind"`
 			Name        string      `db:"name"`
-			StartTime   time.Time   `db:"start_time"`
+			StartTime   pq.NullTime `db:"start_time"`
 			UpdatedAt   time.Time   `db:"updated_at"`
 		}{}
 
@@ -401,13 +434,13 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			return []Rule{}, fmt.Errorf("scan rule: %s", err)
 		}
 
-		buckets := []bucket{}
+		buckets := []Bucket{}
 
 		if err := json.Unmarshal(raw.Buckets, &buckets); err != nil {
 			return []Rule{}, errors.Wrap(err, "unmarshal buckets in rule scan")
 		}
 
-		criteria := criteria{}
+		criteria := Criteria{}
 
 		if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
 			return []Rule{}, errors.Wrap(err, "unmarshal criteria in rule scan")
@@ -418,8 +451,18 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			activatedAt = (raw.ActivatedAt).Time
 		}
 
+		var endTime time.Time
+		if raw.EndTime.Valid {
+			endTime = (raw.EndTime).Time
+		}
+
+		var startTime time.Time
+		if raw.StartTime.Valid {
+			startTime = (raw.StartTime).Time
+		}
+
 		rules = append(rules, Rule{
-			id:          raw.ID,
+			ID:          raw.ID,
 			active:      raw.Active,
 			activatedAt: activatedAt,
 			buckets:     buckets,
@@ -427,10 +470,10 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			createdAt:   raw.CreatedAt,
 			criteria:    &criteria,
 			description: raw.Description,
-			endTime:     raw.EndTime,
+			endTime:     endTime,
 			kind:        raw.Kind,
 			name:        raw.Name,
-			startTime:   raw.StartTime,
+			startTime:   startTime,
 			updatedAt:   raw.UpdatedAt,
 		})
 	}

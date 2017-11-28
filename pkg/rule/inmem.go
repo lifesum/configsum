@@ -37,7 +37,7 @@ func (r *inmemRepo) GetByName(configID, name string) (Rule, error) {
 }
 
 func (r *inmemRepo) Create(input Rule) (Rule, error) {
-	if _, ok := r.ids[input.id]; ok {
+	if _, ok := r.ids[input.ID]; ok {
 		return Rule{}, errors.Wrap(errors.ErrExists, "id")
 	}
 
@@ -68,17 +68,14 @@ func (r *inmemRepo) UpdateWith(input Rule) (Rule, error) {
 	return r.rules[input.configID][input.name], nil
 }
 
-func (r *inmemRepo) ListAll(configID string) ([]Rule, error) {
-	rn, ok := r.rules[configID]
-	if !ok {
-		return []Rule{}, nil
-	}
-
+func (r *inmemRepo) ListAll() ([]Rule, error) {
 	rules := []Rule{}
 
-	for _, rule := range rn {
-		if !rule.deleted {
-			rules = append(rules, rule)
+	for _, c := range r.rules {
+		for _, rule := range c {
+			if !rule.deleted {
+				rules = append(rules, rule)
+			}
 		}
 	}
 
@@ -94,10 +91,15 @@ func (r *inmemRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	rules := []Rule{}
 
 	for _, rule := range rn {
-		if !rule.deleted &&
-			rule.active &&
-			rule.startTime.Before(now) &&
-			rule.endTime.After(now) {
+		if !rule.deleted && rule.active {
+			if !rule.startTime.IsZero() && rule.startTime.After(now) {
+				continue
+			}
+
+			if !rule.endTime.IsZero() && rule.endTime.Before(now) {
+				continue
+			}
+
 			rules = append(rules, rule)
 		}
 	}

@@ -6,29 +6,42 @@ import (
 	"github.com/lifesum/configsum/pkg/errors"
 )
 
+// Supported kinds of rules.
 const (
-	kindOverride kind = iota + 1
-	kindExperiment
-	kindRollout
+	KindOverride Kind = iota + 1
+	KindExperiment
+	KindRollout
 )
 
-type kind uint8
+// Kind defines the type of rule.
+type Kind uint8
 
-type parameters map[string]interface{}
+// Parameters is the set of keys and their new values that an applied rule sets.
+type Parameters map[string]interface{}
 
-type bucket struct {
+// Bucket is a distinct set of parameters that can be used to control
+// segregation by percentage split. Rules which are not of kind experiment will
+// only have one bucket.
+type Bucket struct {
 	Name       string
-	Parameters parameters
+	Parameters Parameters
 	Percentage int
 }
 
-type context struct {
-	user contextUser
+// Context carries information for rule decisions to match criteria.
+type Context struct {
+	User ContextUser
 }
-type contextUser struct {
-	age uint8
-	id  string
+
+// ContextUser bundles user information for rule criteria to match.
+type ContextUser struct {
+	Age uint8
+	ID  string
 }
+
+// Decisions reflects a matrix of rules applied to a config and if present the
+// results of dice rolls for percenatage based decisions.
+type Decisions map[string][]int
 
 // Repo provides access to rules.
 type Repo interface {
@@ -37,104 +50,136 @@ type Repo interface {
 	Create(input Rule) (Rule, error)
 	GetByName(configID, name string) (Rule, error)
 	UpdateWith(input Rule) (Rule, error)
-	ListAll(configID string) ([]Rule, error)
+	ListAll() ([]Rule, error)
 	ListActive(configID string, now time.Time) ([]Rule, error)
 }
 
 // RepoMiddleware is a chainable behaviour modifier for Repo.
 type RepoMiddleware func(Repo) Repo
 
-// Rule facilitates the overide of base configs with consumer provided parameters.
-type Rule struct {
-	active      bool
-	activatedAt time.Time
-	buckets     []bucket
-	configID    string
-	createdAt   time.Time
-	criteria    *criteria
-	description string
-	deleted     bool
-	endTime     time.Time
-	id          string
-	kind        kind
-	name        string
-	startTime   time.Time
-	updatedAt   time.Time
-}
-
 type lifecycle interface {
 	setup() error
 	teardown() error
 }
 
-func (r Rule) validate() (bool, error) {
-	if r.buckets == nil {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing buckets attribute")
+// Rule facilitates the overide of base configs with consumer provided parameters.
+type Rule struct {
+	active      bool
+	activatedAt time.Time
+	buckets     []Bucket
+	configID    string
+	createdAt   time.Time
+	criteria    *Criteria
+	description string
+	deleted     bool
+	endTime     time.Time
+	ID          string
+	kind        Kind
+	name        string
+	startTime   time.Time
+	updatedAt   time.Time
+}
+
+// New returns a valid rule.
+func New(
+	id, configID, name, description string,
+	kind Kind,
+	active bool,
+	criteria *Criteria,
+	buckets []Bucket,
+) (Rule, error) {
+	r := Rule{
+		active:      active,
+		buckets:     buckets,
+		configID:    configID,
+		createdAt:   time.Now(),
+		criteria:    criteria,
+		description: description,
+		ID:          id,
+		kind:        kind,
+		name:        name,
+	}
+
+	err := r.validate()
+	if err != nil {
+		return Rule{}, err
+	}
+
+	return r, nil
+}
+
+func (r Rule) validate() error {
+	if len(r.buckets) == 0 {
+		return errors.Wrap(errors.ErrInvalidRule, "missing buckets")
 	}
 
 	if r.configID == "" {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing configID attribute")
+		return errors.Wrap(errors.ErrInvalidRule, "missing configID")
 	}
 
 	if r.createdAt.IsZero() {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing createdAt attribute")
+		return errors.Wrap(errors.ErrInvalidRule, "missing createdAt")
 	}
 
-	if r.id == "" {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing id attribute")
+	if r.ID == "" {
+		return errors.Wrap(errors.ErrInvalidRule, "missing id")
 	}
 
 	if r.kind == 0 {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing kind attribute")
+		return errors.Wrap(errors.ErrInvalidRule, "missing kind")
 	}
 
 	if r.name == "" {
-		return false, errors.Wrap(errors.ErrInvalidRule, "missing metadate.name attribute")
+		return errors.Wrap(errors.ErrInvalidRule, "missing metadate.name")
 	}
 
-	totalPercentage := 0
-	for _, bucket := range r.buckets {
-		totalPercentage = totalPercentage + bucket.Percentage
-	}
-	if totalPercentage != 100 {
-		return false, errors.Wrap(errors.ErrInvalidRule, "percentage not evenly distributed")
+	if len(r.buckets) > 1 {
+		totalPercentage := 0
+		for _, bucket := range r.buckets {
+			totalPercentage = totalPercentage + bucket.Percentage
+		}
+		if totalPercentage != 100 {
+			return errors.Wrap(errors.ErrInvalidRule, "bucket percentage not evenly distributed")
+		}
 	}
 
-	return true, nil
+	return nil
 }
 
-func (r Rule) run(input parameters, ctx context) (parameters, error) {
-	if r.criteria.User != nil {
+// Run given an input params and context will try to match based on the rules
+// Criteria and if matched overrides the input params with the its own.
+func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, []int, error) {
+	if r.criteria != nil && r.criteria.User != nil {
 		if r.criteria.User.Age != nil {
-			return nil, errors.New("matching user age not implemented")
+			return nil, nil, errors.New("matching user age not implemented")
 		}
 
 		if r.criteria.User.ID != nil {
-			ok, err := r.criteria.User.ID.match(ctx.user.id)
+			ok, err := r.criteria.User.ID.match(ctx.User.ID)
 			if err != nil {
-				return nil, errors.Wrap(err, "user id match")
+				return nil, nil, errors.Wrap(err, "user id match")
 			}
 
 			if !ok {
-				return nil, errors.New("rule didn't match")
+				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "user id")
 			}
 		}
 	}
 
-	params := parameters{}
+	params := Parameters{}
 
 	switch r.kind {
-	case kindOverride:
+	case KindOverride:
 		params = r.buckets[0].Parameters
-	case kindExperiment:
-		return parameters{}, errors.New("experiment based rules not implemented")
-	case kindRollout:
-		return parameters{}, errors.New("rollout based rules not implemented")
+	case KindExperiment:
+		return Parameters{}, nil, errors.New("experiment based rules not implemented")
+	case KindRollout:
+		return Parameters{}, nil, errors.New("rollout based rules not implemented")
 	}
 
 	for name, value := range params {
 		input[name] = value
 	}
 
-	return params, nil
+	return input, nil, nil
 }

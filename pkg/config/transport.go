@@ -14,6 +14,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 // Headers.
@@ -191,7 +192,7 @@ func decodeBaseUpdateRequest(ctx context.Context, r *http.Request) (interface{},
 	}
 
 	v := struct {
-		Parameters rendered `json:"parameters"`
+		Parameters rule.Parameters `json:"parameters"`
 	}{}
 
 	err := json.NewDecoder(r.Body).Decode(&v)

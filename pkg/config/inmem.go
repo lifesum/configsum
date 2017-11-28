@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/lifesum/configsum/pkg/errors"
+
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 // InmemBaseState is a container to pass initial state for the inmem repo.
@@ -28,7 +30,7 @@ func NewInmemBaseRepo(initial InmemBaseState) BaseRepo {
 
 func (s *inmemBaseRepo) Create(
 	id, clientID, name string,
-	parameters rendered,
+	parameters rule.Parameters,
 ) (BaseConfig, error) {
 	_, ok := s.configs[clientID]
 	if !ok {
@@ -144,8 +146,8 @@ func NewInmemUserRepo() UserRepo {
 
 func (r *inmemUserRepo) Append(
 	id, baseID, userID string,
-	decisions ruleDecisions,
-	render rendered,
+	decisions rule.Decisions,
+	render rule.Parameters,
 ) (UserConfig, error) {
 	if _, ok := r.ids[id]; ok {
 		return UserConfig{}, errors.Wrap(errors.ErrExists, "id")
