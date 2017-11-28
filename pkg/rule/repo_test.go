@@ -19,13 +19,13 @@ type prepareFunc func(t *testing.T) Repo
 func TestRule(t *testing.T) {
 	var (
 		userID = generate.RandomString(24)
-		ctx    = context{
-			user: contextUser{
-				age: uint8(rand.Intn(99)),
-				id:  userID,
+		ctx    = Context{
+			User: ContextUser{
+				Age: uint8(rand.Intn(99)),
+				ID:  userID,
 			},
 		}
-		ids = []string{
+		ids = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -33,22 +33,20 @@ func TestRule(t *testing.T) {
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		input = parameters{
+		input = Parameters{
 			"feature_x": false,
 			"feature_y": false,
 		}
-		overrideKind = kindOverride
+		overrideKind = KindOverride
 		r            = Rule{
-			criteria: &criteria{
-				User: &criteriaUser{
-					ID: &matcherListString{
-						Value: ids,
-					},
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
 				},
 			},
-			buckets: []bucket{
-				bucket{
-					Parameters: parameters{
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
 						"feature_x": true,
 					},
 				},
@@ -57,17 +55,18 @@ func TestRule(t *testing.T) {
 		}
 	)
 
-	have, err := r.run(input, ctx)
+	have, _, err := r.Run(input, ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, bucket := range r.buckets {
-		want := bucket
+	want := Parameters{
+		"feature_x": true,
+		"feature_y": false,
+	}
 
-		if reflect.DeepEqual(have, want) {
-			t.Errorf("have %v, want %v", have, want)
-		}
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
 
@@ -78,25 +77,23 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		name      = generate.RandomString(32)
 		endTime   = time.Now().Add(1000)
 		startTime = time.Now().Add(100)
-		ids       = []string{
+		ids       = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		criteria = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		criteria = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
 	)
@@ -112,7 +109,7 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		configID,
 		name,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -133,7 +130,7 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := r.id, rule.id; have != want {
+	if have, want := r.ID, rule.ID; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
@@ -179,50 +176,46 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		nameRuleTwo = generate.RandomString(32)
 		endTime     = time.Now().Add(1000)
 		startTime   = time.Now().Add(100)
-		ids         = []string{
+		ids         = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		crit = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		crit = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
-		updateIds = []string{
+		updateIds = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		updateCriteria = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: updateIds,
-				},
+		updateCriteria = Criteria{
+			User: &CriteriaUser{
+				ID: &updateIds,
 			},
 		}
-		updateBuckets = []bucket{
-			bucket{
+		updateBuckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 40,
 			},
-			bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_y": false,
 					"feature_z": true,
 				},
@@ -242,7 +235,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleOne,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -265,7 +258,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleTwo,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -279,11 +272,11 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 
 	updatedRule := generateRule(
 		true,
-		ruleOne.id,
+		ruleOne.ID,
 		ruleOne.configID,
 		ruleOne.name,
 		true,
-		kindExperiment,
+		KindExperiment,
 		time.Now().Add(200),
 		time.Now().Add(2000),
 		updateBuckets,
@@ -295,7 +288,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rl, err := repo.ListAll(configID)
+	rl, err := repo.ListAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -312,25 +305,23 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		name      = generate.RandomString(32)
 		endTime   = time.Now().Add(1000)
 		startTime = time.Now().Add(100)
-		ids       = []string{
+		ids       = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		criteria = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		criteria = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
 	)
@@ -346,7 +337,7 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		configID,
 		name,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -371,50 +362,46 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		name      = generate.RandomString(32)
 		endTime   = time.Now().Add(1000)
 		startTime = time.Now().Add(100)
-		ids       = []string{
+		ids       = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		crit = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		crit = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
-		updateIds = []string{
+		updateIds = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		updateCriteria = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: updateIds,
-				},
+		updateCriteria = Criteria{
+			User: &CriteriaUser{
+				ID: &updateIds,
 			},
 		}
-		updateBuckets = []bucket{
-			bucket{
+		updateBuckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 40,
 			},
-			bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_y": false,
 					"feature_z": true,
 				},
@@ -434,7 +421,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		configID,
 		name,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -452,7 +439,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		rule.configID,
 		rule.name,
 		rule.deleted,
-		kindExperiment,
+		KindExperiment,
 		time.Now().Add(200),
 		time.Now().Add(2000),
 		updateBuckets,
@@ -475,7 +462,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := ur.id, rl.id; have != want {
+	if have, want := ur.ID, rl.ID; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
@@ -497,12 +484,9 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 }
 
 func testRepoListAllEmpty(t *testing.T, p prepareFunc) {
-	var (
-		repo     = p(t)
-		configID = generate.RandomString(24)
-	)
+	repo := p(t)
 
-	rl, err := repo.ListAll(configID)
+	rl, err := repo.ListAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -520,25 +504,23 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		nameRuleTwo = generate.RandomString(32)
 		endTime     = time.Now().Add(1000)
 		startTime   = time.Now().Add(100)
-		ids         = []string{
+		ids         = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		crit = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		crit = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
 	)
@@ -554,7 +536,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleOne,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -577,7 +559,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleTwo,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -589,7 +571,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rl, err := repo.ListAll(configID)
+	rl, err := repo.ListAll()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,25 +606,23 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		nameRuleThree = generate.RandomString(32)
 		endTime       = time.Now().AddDate(0, 1, 0)
 		startTime     = time.Now().AddDate(0, -1, 0)
-		ids           = []string{
+		ids           = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		buckets = []bucket{
-			bucket{
+		buckets = []Bucket{
+			Bucket{
 				Name: generate.RandomString(24),
-				Parameters: parameters{
+				Parameters: Parameters{
 					"feature_x": true,
 				},
 				Percentage: 100,
 			},
 		}
-		crit = criteria{
-			User: &criteriaUser{
-				ID: &matcherListString{
-					Value: ids,
-				},
+		crit = Criteria{
+			User: &CriteriaUser{
+				ID: &ids,
 			},
 		}
 	)
@@ -658,7 +638,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleOne,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -675,15 +655,17 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
+	var zeroTime time.Time
+
 	ruleTwo := generateRule(
 		true,
 		id.String(),
 		configID,
 		nameRuleTwo,
 		false,
-		kindOverride,
-		startTime,
-		endTime,
+		KindOverride,
+		zeroTime,
+		zeroTime,
 		buckets,
 		&crit,
 	)
@@ -704,7 +686,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		configID,
 		nameRuleThree,
 		false,
-		kindOverride,
+		KindOverride,
 		startTime,
 		endTime,
 		buckets,
@@ -730,10 +712,10 @@ func generateRule(
 	active bool,
 	id, configID, name string,
 	deleted bool,
-	kind kind,
+	kind Kind,
 	startTime, endTime time.Time,
-	buckets []bucket,
-	criteria *criteria,
+	buckets []Bucket,
+	criteria *Criteria,
 ) Rule {
 	return Rule{
 		active:      active,
@@ -744,7 +726,7 @@ func generateRule(
 		deleted:     deleted,
 		description: generate.RandomString(24),
 		endTime:     endTime,
-		id:          id,
+		ID:          id,
 		kind:        kind,
 		name:        name,
 		startTime:   startTime,

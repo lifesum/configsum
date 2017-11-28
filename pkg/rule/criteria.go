@@ -14,14 +14,21 @@ const (
 	comparatorIN
 )
 
-type comparator int8
-
-type criteria struct {
-	User *criteriaUser
-}
-
 type matcher interface {
 	match(input interface{}) (bool, error)
+}
+
+type comparator int8
+
+// Criteria defines if a rule will match on the given context data.
+type Criteria struct {
+	User *CriteriaUser
+}
+
+// CriteriaUser holds all relevant matchers concerning a user.
+type CriteriaUser struct {
+	Age *matcher
+	ID  *MatcherStringList
 }
 
 type matcherBool struct {
@@ -43,26 +50,19 @@ type matcherListInt struct {
 	value []int
 }
 
-type matcherListString struct {
-	Value []string
-}
+type MatcherStringList []string
 
-func (m matcherListString) match(input interface{}) (bool, error) {
+func (m MatcherStringList) match(input interface{}) (bool, error) {
 	t, ok := input.(string)
 	if !ok {
 		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != string", reflect.TypeOf(input).Kind())
 	}
 
-	for _, v := range m.Value {
+	for _, v := range m {
 		if t == v {
 			return true, nil
 		}
 	}
 
 	return false, nil
-}
-
-type criteriaUser struct {
-	Age *matcher
-	ID  *matcherListString
 }

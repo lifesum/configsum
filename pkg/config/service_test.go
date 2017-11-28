@@ -27,7 +27,7 @@ func TestBaseServiceUpdate(t *testing.T) {
 		svc = NewBaseService(baseRepo, nil)
 	)
 
-	_, err := svc.Update(baseID, rendered{})
+	_, err := svc.Update(baseID, rule.Parameters{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,8 +38,9 @@ func TestUserServiceRender(t *testing.T) {
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
 		baseName   = generate.RandomString(24)
-		baseRender = rendered{
-			generate.RandomString(24): false,
+		featureKey = generate.RandomString(24)
+		baseRender = rule.Parameters{
+			featureKey: false,
 		}
 		baseRepo = NewInmemBaseRepo(InmemBaseState{
 			clientID: map[string]BaseConfig{
@@ -53,16 +54,59 @@ func TestUserServiceRender(t *testing.T) {
 		})
 		userID   = generate.RandomString(24)
 		userRepo = NewInmemUserRepo()
+		ruleID   = generate.RandomString(24)
 		ruleRepo = rule.NewInmemRuleRepo()
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
+		matchIDs = rule.MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
 	)
 
-	uc, err := svc.Render(clientID, baseName, userID)
+	r, err := rule.New(
+		ruleID,
+		baseID,
+		"override",
+		"",
+		rule.KindOverride,
+		true,
+		&rule.Criteria{
+			User: &rule.CriteriaUser{
+				ID: &matchIDs,
+			},
+		},
+		[]rule.Bucket{
+			{
+				Name: "defualt",
+				Parameters: rule.Parameters{
+					featureKey: true,
+				},
+			},
+		},
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if have, want := uc.rendered, baseRender; !reflect.DeepEqual(have, want) {
+	_, err = ruleRepo.Create(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uc, err := svc.Render(clientID, baseName, userID, userRenderContext{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := rule.Parameters{
+		featureKey: true,
+	}
+
+	if have := uc.rendered; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v,want %#v", have, want)
 	}
 
@@ -75,13 +119,79 @@ func TestUserServiceRender(t *testing.T) {
 		t.Errorf("have %#v,want %#v", have, want)
 	}
 
-	rc, err := svc.Render(clientID, baseName, userID)
+	rc, err := svc.Render(clientID, baseName, userID, userRenderContext{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if have, want := uc, rc; !reflect.DeepEqual(have, want) {
-		t.Errorf("have %#v,want %#v", have, want)
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+}
+
+func TestUserServiceRenderFailingRule(t *testing.T) {
+	var (
+		clientID   = generate.RandomString(24)
+		baseID     = generate.RandomString(24)
+		baseName   = generate.RandomString(24)
+		baseRender = rule.Parameters{
+			generate.RandomString(24): false,
+		}
+		baseRepo = NewInmemBaseRepo(InmemBaseState{
+			clientID: map[string]BaseConfig{
+				baseName: BaseConfig{
+					ClientID:   clientID,
+					ID:         baseID,
+					Name:       baseName,
+					Parameters: baseRender,
+				},
+			},
+		})
+		matchIDs = rule.MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		ruleID   = generate.RandomString(24)
+		ruleRepo = rule.NewInmemRuleRepo()
+		userID   = generate.RandomString(24)
+		userRepo = NewInmemUserRepo()
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
+	)
+
+	r, err := rule.New(
+		ruleID,
+		baseID,
+		"broken rule",
+		"",
+		rule.KindOverride,
+		true,
+		&rule.Criteria{
+			User: &rule.CriteriaUser{
+				ID: &matchIDs,
+			},
+		},
+		[]rule.Bucket{
+			{
+				Name: "default",
+				Parameters: rule.Parameters{
+					"feature_focus_toggle": true,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ruleRepo.Create(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = svc.Render(clientID, baseName, userID, userRenderContext{})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -96,7 +206,7 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
 
-	_, err := svc.Render(clientID, baseName, userID)
+	_, err := svc.Render(clientID, baseName, userID, userRenderContext{})
 	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -106,19 +216,19 @@ func TestValidateParamDelta(t *testing.T) {
 	var (
 		key   = generate.RandomString(6)
 		cases = []struct {
-			base rendered
-			new  rendered
+			base rule.Parameters
+			new  rule.Parameters
 		}{
 			{
-				base: rendered{
+				base: rule.Parameters{
 					key: false,
 				},
 			}, // New missing.
 			{
-				base: rendered{
+				base: rule.Parameters{
 					key: false,
 				},
-				new: rendered{
+				new: rule.Parameters{
 					key: 12,
 				},
 			}, // Invalid change of types.

@@ -55,12 +55,12 @@ func (r *instrumentRuleRepo) UpdateWith(input Rule) (rl Rule, err error) {
 	return r.UpdateWith(input)
 }
 
-func (r *instrumentRuleRepo) ListAll(configID string) (rls []Rule, err error) {
+func (r *instrumentRuleRepo) ListAll() (rs []Rule, err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelRuleRepo, "ListAll", begin, err)
 	}(time.Now())
 
-	return r.ListAll(configID)
+	return r.ListAll()
 }
 
 func (r *instrumentRuleRepo) ListActive(

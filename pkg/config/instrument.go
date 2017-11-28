@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/lifesum/configsum/pkg/instrument"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 const (
@@ -34,7 +35,7 @@ func NewBaseRepoInstrumentMiddleware(
 
 func (r *instrumentBaseRepo) Create(
 	id, clientID, name string,
-	parameters rendered,
+	parameters rule.Parameters,
 ) (c BaseConfig, err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelBaseRepo, "Create", begin, err)
@@ -114,8 +115,8 @@ func NewUserRepoInstrumentMiddleware(
 
 func (r *instrumentUserRepo) Append(
 	id, baseID, userID string,
-	decisions ruleDecisions,
-	render rendered,
+	decisions rule.Decisions,
+	render rule.Parameters,
 ) (c UserConfig, err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelUserRepo, "Append", begin, err)

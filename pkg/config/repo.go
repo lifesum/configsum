@@ -2,13 +2,15 @@ package config
 
 import (
 	"time"
+
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 // BaseRepo provides access to base configs.
 type BaseRepo interface {
 	lifecycle
 
-	Create(id, clientID, name string, parameters rendered) (BaseConfig, error)
+	Create(id, clientID, name string, parameters rule.Parameters) (BaseConfig, error)
 	GetByID(id string) (BaseConfig, error)
 	GetByName(clientID, name string) (BaseConfig, error)
 	List() (BaseList, error)
@@ -24,7 +26,7 @@ type BaseConfig struct {
 	Deleted    bool
 	ID         string
 	Name       string
-	Parameters rendered
+	Parameters rule.Parameters
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
@@ -44,40 +46,14 @@ func (l BaseList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-type rendered map[string]interface{}
-
-func (r rendered) SetBool(key string, value bool) {
-	r[key] = value
-}
-
-func (r rendered) setNumber(key string, value float64) {
-	r[key] = value
-}
-
-func (r rendered) setNumberList(key string, value []float64) {
-	r[key] = value
-}
-
-func (r rendered) setString(key, value string) {
-	r[key] = value
-}
-
-func (r rendered) setStringList(key string, value []string) {
-	r[key] = value
-}
-
-// ruleDecisions reflects a matrix of rules applied to a config and if present
-// the results of dice rolls for percenatage based decisions.
-type ruleDecisions map[string][]int
-
 // UserRepo provides access to user configs.
 type UserRepo interface {
 	lifecycle
 
 	Append(
 		id, baseID, userID string,
-		decisiosn ruleDecisions,
-		render rendered,
+		decisiosn rule.Decisions,
+		render rule.Parameters,
 	) (UserConfig, error)
 	GetLatest(baseID, userID string) (UserConfig, error)
 }
@@ -89,8 +65,8 @@ type UserRepoMiddleware func(UserRepo) UserRepo
 type UserConfig struct {
 	baseID        string
 	id            string
-	rendered      rendered
-	ruleDecisions ruleDecisions
+	rendered      rule.Parameters
+	ruleDecisions rule.Decisions
 	userID        string
 	createdAt     time.Time
 }

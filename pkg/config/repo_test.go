@@ -11,6 +11,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 type prepareBaseRepoFunc func(t *testing.T) BaseRepo
@@ -21,7 +22,7 @@ func testBaseRepoCreateDuplicate(t *testing.T, p prepareBaseRepoFunc) {
 	var (
 		clientID   = generate.RandomString(24)
 		name       = generate.RandomString(12)
-		parameters = rendered{
+		parameters = rule.Parameters{
 			"feature_awesome-sauce_toggle": true,
 		}
 		repo = p(t)
@@ -48,7 +49,7 @@ func testBaseRepoGetByID(t *testing.T, p prepareBaseRepoFunc) {
 	var (
 		clientID   = generate.RandomString(24)
 		name       = generate.RandomString(12)
-		parameters = rendered{
+		parameters = rule.Parameters{
 			"feature_awesome-sauce_toggle": true,
 		}
 		repo = p(t)
@@ -100,7 +101,7 @@ func testBaseRepoGetByName(t *testing.T, p prepareBaseRepoFunc) {
 	var (
 		clientID   = generate.RandomString(24)
 		name       = generate.RandomString(12)
-		parameters = rendered{
+		parameters = rule.Parameters{
 			"feature_awesome-sauce_toggle": true,
 		}
 		repo = p(t)
@@ -165,7 +166,7 @@ func testBaseRepoList(t *testing.T, p prepareBaseRepoFunc) {
 		var (
 			clientID   = generate.RandomString(24)
 			name       = generate.RandomString(12)
-			parameters = rendered{
+			parameters = rule.Parameters{
 				generate.RandomString(8):  false,
 				generate.RandomString(12): float64(seed.Intn(64)),
 				generate.RandomString(16): generate.RandomString(24),
@@ -221,7 +222,7 @@ func testBaseRepoUpdate(t *testing.T, p prepareBaseRepoFunc) {
 	var (
 		clientID   = generate.RandomString(24)
 		name       = generate.RandomString(12)
-		parameters = rendered{
+		parameters = rule.Parameters{
 			"feature_awesome-sauce_toggle": true,
 		}
 		repo = p(t)
@@ -243,7 +244,7 @@ func testBaseRepoUpdate(t *testing.T, p prepareBaseRepoFunc) {
 		t.Fatal(err)
 	}
 
-	newParams := rendered{
+	newParams := rule.Parameters{
 		"feature_awesome-sauce_toggle": true,
 		"feature_awesome-sauce_desc":   generate.RandomString(24),
 	}
@@ -273,19 +274,19 @@ func testBaseRepoUpdate(t *testing.T, p prepareBaseRepoFunc) {
 
 func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 	var (
-		baseID    = generate.RandomString(24)
-		userID    = generate.RandomString(24)
-		render    = rendered{}
+		baseID = generate.RandomString(24)
+		userID = generate.RandomString(24)
+		seed   = rand.New(rand.NewSource(time.Now().UnixNano()))
+		render = rule.Parameters{
+			generate.RandomString(24): seed.Float64(),
+		}
 		repo      = p(t)
-		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
-		decisions = ruleDecisions{
+		decisions = rule.Decisions{
 			generate.RandomString(24): []int{seed.Intn(100), seed.Intn(100)},
 			generate.RandomString(24): []int{seed.Intn(100)},
 			generate.RandomString(24): []int{},
 		}
 	)
-
-	render.setNumber(generate.RandomString(24), seed.Float64())
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {
@@ -308,7 +309,7 @@ func testUserRepoGetLatest(t *testing.T, p prepareUserRepoFunc) {
 		baseID,
 		userID,
 		nil,
-		rendered{},
+		rule.Parameters{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -360,19 +361,19 @@ func testUserRepoGetLatestNotFound(t *testing.T, p prepareUserRepoFunc) {
 
 func testUserRepoAppendDuplicate(t *testing.T, p prepareUserRepoFunc) {
 	var (
-		baseID    = generate.RandomString(24)
-		userID    = generate.RandomString(24)
-		render    = rendered{}
+		baseID = generate.RandomString(24)
+		userID = generate.RandomString(24)
+		render = rule.Parameters{
+			generate.RandomString(24): false,
+		}
 		repo      = p(t)
 		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
-		decisions = ruleDecisions{
+		decisions = rule.Decisions{
 			generate.RandomString(32): []int{seed.Int(), seed.Int()},
 			generate.RandomString(32): []int{seed.Int()},
 			generate.RandomString(32): []int{},
 		}
 	)
-
-	render.SetBool(generate.RandomString(24), false)
 
 	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
 	if err != nil {

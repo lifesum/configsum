@@ -54,7 +54,7 @@ func (r *logRuleRepo) Create(input Rule) (rl Rule, err error) {
 			logCreatedAt, input.createdAt,
 			logDuration, time.Since(begin).Nanoseconds(),
 			logEndTime, input.endTime,
-			logID, input.id,
+			logID, input.ID,
 			logKind, input.kind,
 			logName, input.name,
 			logOp, "Create",
@@ -109,7 +109,7 @@ func (r *logRuleRepo) UpdateWith(input Rule) (rl Rule, err error) {
 	return r.next.UpdateWith(input)
 }
 
-func (r *logRuleRepo) ListAll(configID string) (rls []Rule, err error) {
+func (r *logRuleRepo) ListAll() (rls []Rule, err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
@@ -124,7 +124,7 @@ func (r *logRuleRepo) ListAll(configID string) (rls []Rule, err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.ListAll(configID)
+	return r.next.ListAll()
 }
 
 func (r *logRuleRepo) ListActive(configID string, now time.Time) (rls []Rule, err error) {

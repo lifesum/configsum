@@ -13,6 +13,7 @@ import (
 	"github.com/lifesum/configsum/pkg/auth"
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/rule"
 )
 
 type baseCreateRequest struct {
@@ -154,7 +155,7 @@ func baseListEndpoint(svc BaseService) endpoint.Endpoint {
 
 type baseUpdateRequest struct {
 	id         string
-	parameters rendered
+	parameters rule.Parameters
 }
 
 func baseUpdateEndpoint(svc BaseService) endpoint.Endpoint {
@@ -211,7 +212,7 @@ type userRenderResponse struct {
 	baseName  string
 	clientID  string
 	id        string
-	rendered  rendered
+	rendered  rule.Parameters
 	createdAt time.Time
 }
 
@@ -227,7 +228,7 @@ func userRenderEndpoint(svc UserService) endpoint.Endpoint {
 			userID   = ctx.Value(auth.ContextKeyUserID).(string)
 		)
 
-		c, err := svc.Render(clientID, req.baseConfig, userID)
+		c, err := svc.Render(clientID, req.baseConfig, userID, req.context)
 		if err != nil {
 			return nil, err
 		}

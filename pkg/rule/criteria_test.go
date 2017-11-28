@@ -21,9 +21,7 @@ func TestMatcherListString(t *testing.T) {
 		}
 	)
 
-	m := matcherListString{
-		Value: goodVals,
-	}
+	m := MatcherStringList(goodVals)
 
 	ok, err := m.match(input)
 	if err != nil {
@@ -34,9 +32,7 @@ func TestMatcherListString(t *testing.T) {
 		t.Errorf("expect input to match")
 	}
 
-	m = matcherListString{
-		Value: badVals,
-	}
+	m = MatcherStringList(badVals)
 
 	ok, err = m.match(input)
 	if err != nil {

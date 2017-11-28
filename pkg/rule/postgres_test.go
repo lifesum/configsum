@@ -1,3 +1,5 @@
+// +build integration
+
 package rule
 
 import (
@@ -33,20 +35,20 @@ func TestPostgresRepoListAll(t *testing.T) {
 	testRepoListAll(t, preparePGRepo)
 }
 
-func TestPostgresRepoListActive(t *testing.T) {
-	testRepoListActive(t, preparePGRepo)
-}
-
-func TestPostgresRepoListActiveEmpty(t *testing.T) {
-	testRepoListActiveEmpty(t, preparePGRepo)
-}
-
 func TestPostgresRepoListAllEmpty(t *testing.T) {
 	testRepoListAllEmpty(t, preparePGRepo)
 }
 
 func TestPostgresRepoListDeleted(t *testing.T) {
 	testRepoListDeleted(t, preparePGRepo)
+}
+
+func TestPostgresRepoListActive(t *testing.T) {
+	testRepoListActive(t, preparePGRepo)
+}
+
+func TestPostgresRepoListActiveEmpty(t *testing.T) {
+	testRepoListActiveEmpty(t, preparePGRepo)
 }
 
 func preparePGRepo(t *testing.T) Repo {
