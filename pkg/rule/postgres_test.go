@@ -51,6 +51,10 @@ func TestPostgresRepoListActiveEmpty(t *testing.T) {
 	testRepoListActiveEmpty(t, preparePGRepo)
 }
 
+func TestPostgresRepoCreateRollout(t *testing.T) {
+	testRepoCreateRollout(t, preparePGRepo)
+}
+
 func preparePGRepo(t *testing.T) Repo {
 	db, err := sqlx.Connect("postgres", pgURI)
 	if err != nil {

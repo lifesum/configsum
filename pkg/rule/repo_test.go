@@ -300,28 +300,15 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 
 func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 	var (
-		repo      = p(t)
-		configID  = generate.RandomString(24)
-		name      = generate.RandomString(32)
-		endTime   = time.Now().Add(1000)
-		startTime = time.Now().Add(100)
-		ids       = MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
-		buckets = []Bucket{
+		repo     = p(t)
+		configID = generate.RandomString(24)
+		name     = generate.RandomString(32)
+		buckets  = []Bucket{
 			Bucket{
 				Name: generate.RandomString(24),
 				Parameters: Parameters{
 					"feature_x": true,
 				},
-				Percentage: 100,
-			},
-		}
-		criteria = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
 			},
 		}
 	)
@@ -331,18 +318,10 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rule := generateRule(
-		false,
-		id.String(),
-		configID,
-		name,
-		false,
-		KindOverride,
-		startTime,
-		endTime,
-		buckets,
-		&criteria,
-	)
+	rule, err := New(id.String(), configID, name, "", KindOverride, false, nil, buckets)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = repo.Create(rule)
 	if err != nil {
@@ -704,6 +683,52 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 	}
 
 	if have, want := len(rl), 2; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func testRepoCreateRollout(t *testing.T, p prepareFunc) {
+	var (
+		repo     = p(t)
+		configID = generate.RandomString(24)
+		name     = generate.RandomString(32)
+		buckets  = []Bucket{
+			Bucket{
+				Name: generate.RandomString(24),
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		}
+	)
+
+	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule, err := New(id.String(), configID, name, "", KindRollout, false, nil, buckets)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule.rollout = 57
+
+	created, err := repo.Create(rule)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	retrieved, err := repo.GetByName(configID, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := retrieved.kind, created.kind; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := retrieved.rollout, created.rollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

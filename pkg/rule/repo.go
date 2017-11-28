@@ -76,6 +76,7 @@ type Rule struct {
 	ID          string
 	kind        Kind
 	name        string
+	rollout     uint8
 	startTime   time.Time
 	updatedAt   time.Time
 }
@@ -92,7 +93,7 @@ func New(
 		active:      active,
 		buckets:     buckets,
 		configID:    configID,
-		createdAt:   time.Now(),
+		createdAt:   time.Now().UTC(),
 		criteria:    criteria,
 		description: description,
 		ID:          id,
@@ -131,6 +132,10 @@ func (r Rule) validate() error {
 
 	if r.name == "" {
 		return errors.Wrap(errors.ErrInvalidRule, "missing metadate.name")
+	}
+
+	if r.rollout > 100 {
+		return errors.Wrap(errors.ErrInvalidRule, "rollout percentage too high")
 	}
 
 	if len(r.buckets) > 1 {

@@ -34,8 +34,12 @@ func TestInmemRepoListAllEmpty(t *testing.T) {
 	testRepoListAllEmpty(t, prepareInmemRepo)
 }
 
-func TesstInmemRepoListDeleted(t *testing.T) {
+func TestInmemRepoListDeleted(t *testing.T) {
 	testRepoListDeleted(t, prepareInmemRepo)
+}
+
+func TestInmemRepoCreateRollout(t *testing.T) {
+	testRepoCreateRollout(t, prepareInmemRepo)
 }
 
 func prepareInmemRepo(t *testing.T) Repo {
