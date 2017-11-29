@@ -159,7 +159,7 @@ update msg model =
                 )
 
             FormSubmitted (Err error) ->
-                ( model, Cmd.none )
+                ( { model | error = Just error }, Cmd.none )
 
             FormSubmitted (Ok config) ->
                 ( initModel model.now model.clients Nothing (List.append model.configs [ config ]), Cmd.none )
@@ -336,7 +336,10 @@ viewList model =
             Dict.fromList (List.map (\c -> ( c.id, c )) model.clients)
     in
         div []
-            [ h1 [] [ text "Configs/Base" ]
+            [ h1 []
+                [ text "Configs/"
+                , strong [] [ text "Base" ]
+                ]
             , View.Error.view model.error
             , table []
                 [ thead []

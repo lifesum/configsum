@@ -33,10 +33,12 @@ a.active, a.action {
 }
 
 h1 {
-	border-bottom: 0.2rem solid rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.6);
+	color: rgba(34, 34, 34, 1);
 	font-size: 2.4rem;
 	font-weight: 400;
-	padding-bottom: 1.6rem;
+	margin-bottom: 3.2rem;
+	padding: 1.6rem 0.8rem;
 }
 
 h2 {
