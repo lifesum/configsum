@@ -237,16 +237,16 @@ view model =
 
 
 viewAdd : Int -> String -> Msg -> Html Msg
-viewAdd tdSpan lableText msg =
+viewAdd tdSpan labelText msg =
     tr [ class "add", onClick msg ]
-        [ td [ class "type", colspan tdSpan ] [ text lableText ]
+        [ td [ class "type", colspan tdSpan ] [ text labelText ]
         ]
 
 
 viewAddConfigForm : String -> List Client -> List (Html Msg)
 viewAddConfigForm name clients =
     [ tr [ class "form" ]
-        [ td []
+        [ td [ class "name" ]
             [ input
                 [ onInput UpdateFormName
                 , placeholder "Name"
@@ -435,9 +435,8 @@ viewParameterForm config parameter =
             [ "bool"
             , "number"
             , "string"
-
-            -- "numbers"
-            -- "strings"
+              -- "numbers"
+              -- "strings"
             ]
     in
         [ tr [ class "form" ]

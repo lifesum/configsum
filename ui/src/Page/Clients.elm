@@ -1,7 +1,24 @@
 module Page.Clients exposing (Model, Msg, init, update, view)
 
-import Html exposing (Html, a, button, div, form, h1, input, span, table, tbody, td, text, th, thead, tr)
-import Html.Attributes exposing (class, placeholder, type_, value)
+import Html
+    exposing
+        ( Html
+        , a
+        , button
+        , div
+        , form
+        , h1
+        , input
+        , span
+        , table
+        , tbody
+        , td
+        , text
+        , th
+        , thead
+        , tr
+        )
+import Html.Attributes exposing (class, colspan, placeholder, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Task exposing (Task)
@@ -69,49 +86,55 @@ view model =
     div []
         [ h1 [] [ text "Clients" ]
         , View.Error.view model.error
-        , viewCreate model.formName model.showCreate
-        , viewList model.clients
+        , viewList model
         ]
 
 
-viewCreate : String -> Bool -> Html Msg
-viewCreate name showForm =
-    let
-        content =
-            if showForm then
-                form [ onSubmit FormSubmit ]
-                    [ input
-                        [ onInput UpdateName
-                        , placeholder "Name"
-                        , type_ "text"
-                        , value name
-                        ]
-                        []
-                    , button [] [ text "create" ]
-                    ]
-            else
-                a
-                    [ class "action"
-                    , onClick ToggleCreate
-                    ]
-                    [ span [ class "nc-icon nc-circle-add" ] []
-                    , span [] [ text "create client" ]
-                    ]
-    in
-        div [ class "create" ] [ content ]
+viewAdd : Int -> String -> Msg -> Html Msg
+viewAdd tdSpan labelText msg =
+    tr [ class "add", onClick msg ]
+        [ td [ class "type", colspan tdSpan ] [ text labelText ]
+        ]
 
 
-viewList : List Client -> Html Msg
-viewList clients =
-    table []
-        [ thead []
-            [ tr []
-                [ th [] [ text "name" ]
-                , th [] [ text "token" ]
+viewCreate : String -> List (Html Msg)
+viewCreate name =
+    [ tr [ class "form" ]
+        [ td [ class "name" ]
+            [ input
+                [ onInput UpdateName
+                , placeholder "Name"
+                , type_ "text"
+                , value name
                 ]
+                []
             ]
-        , tbody [] (List.map viewItem clients)
+        , td [] []
         ]
+    , tr [ class "save", onClick FormSubmit ]
+        [ td [ class "type", colspan 2 ] [ text "save client" ]
+        ]
+    ]
+
+
+viewList : Model -> Html Msg
+viewList { clients, formName, showCreate } =
+    let
+        action =
+            if showCreate then
+                viewCreate formName
+            else
+                [ viewAdd 2 "add client" ToggleCreate ]
+    in
+        table []
+            [ thead []
+                [ tr []
+                    [ th [] [ text "name" ]
+                    , th [] [ text "token" ]
+                    ]
+                ]
+            , tbody [] (List.append (List.map viewItem clients) action)
+            ]
 
 
 viewItem : Client -> Html Msg
