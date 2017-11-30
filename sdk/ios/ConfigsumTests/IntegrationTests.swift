@@ -23,7 +23,7 @@ class IntegrationTests: XCTestCase {
         self.configsum = Configsum(environment: environment)
         self.attributes = Context(appVersion: "8.6.7",
                                      locale: Locale.current,
-                                     platform: .watchOS,
+                                     platform: .iOS,
                                      osVersion: "8.0",
                                      metadata: nil,
                                      user: User(age: 20))
