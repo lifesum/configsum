@@ -10,6 +10,7 @@ import Html
         , h1
         , input
         , span
+        , strong
         , table
         , tbody
         , td
@@ -84,7 +85,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ h1 [] [ text "Clients" ]
+        [ h1 [] [ strong [] [ text "Clients" ] ]
         , View.Error.view model.error
         , viewList model
         ]

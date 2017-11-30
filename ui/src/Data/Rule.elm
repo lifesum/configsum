@@ -1,6 +1,7 @@
-module Data.Rule exposing (Rule, Kind(..))
+module Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(..), Rule)
 
 import Date exposing (Date)
+import Data.Parameter exposing (Parameter)
 
 
 type Kind
@@ -10,7 +11,18 @@ type Kind
 
 
 type alias Bucket =
-    {}
+    { parameters : List Parameter
+    }
+
+
+type alias Criteria =
+    { user : Maybe CriteriaUser
+    }
+
+
+type alias CriteriaUser =
+    { id : List String
+    }
 
 
 type alias Rule =
@@ -19,6 +31,7 @@ type alias Rule =
     , buckets : List Bucket
     , configId : String
     , createdAt : Date
+    , criteria : Maybe Criteria
     , description : String
     , endTime : Date
     , id : String

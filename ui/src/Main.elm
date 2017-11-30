@@ -202,12 +202,12 @@ setRoute maybeRoute model =
 
         Just Route.Rules ->
             ( { model | pageState = TransitioningFrom <| getPage model.pageState }
-            , Task.attempt RulesLoaded Rules.initList
+            , Task.attempt RulesLoaded <| Rules.initList model.now
             )
 
         Just (Route.Rule id) ->
             ( { model | pageState = TransitioningFrom <| getPage model.pageState }
-            , Task.attempt RuleLoaded <| Rules.initRule id
+            , Task.attempt RuleLoaded <| Rules.initRule model.now id
             )
 
 

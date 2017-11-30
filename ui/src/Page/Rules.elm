@@ -1,14 +1,34 @@
 module Page.Rules exposing (Model, Msg, initList, initRule, update, view)
 
 import Date
-import Html exposing (Html, div, h1, table, tbody, td, text, th, thead, tr, strong)
-import Html.Attributes exposing (class, colspan)
+import Html
+    exposing
+        ( Html
+        , div
+        , h1
+        , h2
+        , section
+        , span
+        , strong
+        , table
+        , tbody
+        , td
+        , text
+        , th
+        , thead
+        , tr
+        )
+import Html.Attributes exposing (class, classList, colspan)
 import Html.Events exposing (onClick)
 import Http
 import Task exposing (Task)
-import Data.Rule exposing (Rule, Kind(Experiment, Override, Rollout))
+import Time exposing (Time)
+import Data.Parameter exposing (Parameter(..))
+import Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(Experiment, Override, Rollout), Rule)
 import Page.Errored exposing (PageLoadError)
+import View.Date
 import View.Error
+import View.Parameter
 import Route
 
 
@@ -17,20 +37,35 @@ import Route
 
 type alias Model =
     { error : Maybe Http.Error
+    , now : Time
     , rule : Maybe Rule
     , rules : List Rule
     , showAddRule : Bool
     }
 
 
-initList : Task PageLoadError Model
-initList =
-    Task.succeed <| Model Nothing Nothing testList False
+initList : Time -> Task PageLoadError Model
+initList now =
+    Task.succeed <| Model Nothing now Nothing testList False
 
 
-initRule : String -> Task PageLoadError Model
-initRule id =
-    Task.succeed <| Model Nothing (Just (testRule True "override" Override)) [] False
+initRule : Time -> String -> Task PageLoadError Model
+initRule now id =
+    let
+        buckets =
+            [ Bucket [ BoolParameter "feature_say-cheese_toggled" True ]
+            ]
+
+        criteria =
+            Criteria <| Just (CriteriaUser testIds)
+
+        date =
+            Date.fromTime 0
+
+        rule =
+            Rule True date buckets "01C066T0E4W2TM66RPPS6B0WN6" date (Just criteria) "Enable say cheese for staff members." date "01C068XFHXXRZSFHGX2A3JAB7O" Override "override_say-cheese_staff" 0 date date
+    in
+        Task.succeed <| Model Nothing now (Just rule) [] False
 
 
 testList : List Rule
@@ -44,10 +79,18 @@ testList =
 testRule : Bool -> String -> Kind -> Rule
 testRule active name kind =
     let
+        criteria =
+            Criteria <| Just (CriteriaUser testIds)
+
         date =
             Date.fromTime 0
     in
-        Rule active date [] "config123" date "" date "id123" kind name 0 date date
+        Rule active date [] "config123" date Nothing "" date "id123" kind name 0 date date
+
+
+testIds : List String
+testIds =
+    [ "17396058", "18784245", "14952160", "18636969", "14643208", "6595859", "10326163", "13818577", "17835011", "15230382", "19819697", "10116390", "14547084", "7402749", "7837787", "3920719", "10208124", "16004573", "15491054", "19651858", "12904911", "21959304", "15597571", "6097583", "18588", "11687029", "15712186", "21098618", "10326126", "24899644", "19840933", "25209715", "21231432", "8428965", "15491282", "11108767", "20456171", "10958987", "6141436", "10710556", "6807818", "6837392", "25903864", "22083683", "17963700", "19734249", "20897727", "5495849", "16925570", "7340959", "21788032", "21097143", "16756452", "19074415", "4935212", "11961267", "25547673", "5878481", "8269516", "6898344", "14544412" ]
 
 
 
@@ -81,7 +124,7 @@ view : Model -> Html Msg
 view model =
     case model.rule of
         Just rule ->
-            viewRule rule
+            viewRule model.error model.now rule
 
         Nothing ->
             viewList model
@@ -103,6 +146,50 @@ viewAddRuleForm =
         [ td [ class "type", colspan 4 ] [ text "save rule" ]
         ]
     ]
+
+
+viewCard : ( String, String ) -> Html Msg
+viewCard ( key, value ) =
+    div [ class "card" ]
+        [ span [] [ text key ]
+        , strong [] [ text value ]
+        ]
+
+
+viewCriteria : Maybe Criteria -> Html Msg
+viewCriteria criteria =
+    let
+        attrs =
+            case criteria of
+                Just criteria ->
+                    attrCriteriaUser criteria.user
+
+                Nothing ->
+                    []
+    in
+        if List.length (attrs) > 0 then
+            section [ class "criteria" ]
+                [ h2 [] [ text "criteria" ]
+                , table []
+                    [ thead []
+                        [ tr []
+                            [ th [ class "attribute" ] [ text "attribute" ]
+                            , th [ class "match" ] [ text "match" ]
+                            ]
+                        ]
+                    , tbody [] <| List.map viewCriteriaItem attrs
+                    ]
+                ]
+        else
+            section [ class "criteria" ] []
+
+
+viewCriteriaItem : ( String, String ) -> Html Msg
+viewCriteriaItem ( attr, value ) =
+    tr []
+        [ td [] [ text attr ]
+        , td [ class "value" ] [ text value ]
+        ]
 
 
 viewList : Model -> Html Msg
@@ -148,11 +235,75 @@ viewListItem rule =
         ]
 
 
-viewRule : Rule -> Html Msg
-viewRule rule =
+viewMeta : Time -> Rule -> Html Msg
+viewMeta now rule =
+    let
+        cards =
+            [ ( "id", rule.id )
+            , ( "config", rule.configId )
+            , ( "created", (View.Date.short rule.createdAt) )
+            , ( "updated", (View.Date.pretty now rule.updatedAt) )
+            ]
+    in
+        section [ class "meta" ] <| List.map viewCard cards
+
+
+viewRule : Maybe Http.Error -> Time -> Rule -> Html Msg
+viewRule error now rule =
     div []
         [ h1 []
             [ text "Rules/"
             , strong [] [ text rule.name ]
             ]
+        , View.Error.view error
+        , viewMeta now rule
+        , viewCriteria rule.criteria
+        , viewParameters rule.buckets
         ]
+
+
+viewParameter : Parameter -> Html Msg
+viewParameter param =
+    tr []
+        [ td [] [ text <| View.Parameter.name param ]
+        , td
+            [ classList [ ( "type", True ), ( (View.Parameter.typeClass param), True ) ] ]
+            [ text <| View.Parameter.typeClass param
+            ]
+        , td
+            [ class <| "value " ++ (View.Parameter.typeClass param)
+            ]
+            []
+        ]
+
+
+viewParameters : List Bucket -> Html Msg
+viewParameters buckets =
+    let
+        params =
+            if not <| List.isEmpty buckets then
+                case List.head buckets of
+                    Just bucket ->
+                        bucket.parameters
+
+                    Nothing ->
+                        []
+            else
+                []
+    in
+        View.Parameter.viewTable [] params
+
+
+
+-- HELPER
+
+
+attrCriteriaUser : Maybe CriteriaUser -> List ( String, String )
+attrCriteriaUser user =
+    case user of
+        Just user ->
+            [ ( "User.ID", (toString <| List.length user.id) ++ " IDs" )
+            ]
+
+        Nothing ->
+            []
