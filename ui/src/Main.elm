@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Html exposing (Html, div, footer, h1, text)
-import Html.Attributes exposing (class)
 import Navigation
 import Task
 import Time exposing (Time)
@@ -10,6 +9,7 @@ import Page.Blank as Blank
 import Page.Clients as Clients
 import Page.Configs as Configs
 import Page.Errored as Errored exposing (PageLoadError)
+import Page.Rules as Rules
 import Route exposing (Route, navigate)
 import View.Page as Page
 
@@ -47,6 +47,7 @@ type Page
     = Blank String
     | Clients Clients.Model
     | Configs Configs.Model
+    | Rules Rules.Model
     | Errored PageLoadError
     | NotFound
 
@@ -134,6 +135,12 @@ update msg model =
                 in
                     setRoute maybeRoute { model | route = route }
 
+            ( RulesLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( RulesLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Rules subModel) }, Cmd.none )
+
             ( SetRoute route, _ ) ->
                 ( model, navigate route )
 
@@ -162,15 +169,15 @@ setRoute maybeRoute model =
         Nothing ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just Route.Clients ->
+        Just (Route.Clients) ->
             ( { model | pageState = TransitioningFrom (getPage model.pageState) }
             , Task.attempt ClientsLoaded Clients.init
             )
 
-        Just Route.Configs ->
+        Just (Route.Configs) ->
             ( model, navigate Route.ConfigsBase )
 
-        Just Route.ConfigsBase ->
+        Just (Route.ConfigsBase) ->
             ( { model | pageState = TransitioningFrom (getPage model.pageState) }
             , Task.attempt ConfigsLoaded (Configs.init model.now)
             )
@@ -180,11 +187,13 @@ setRoute maybeRoute model =
             , Task.attempt ConfigBaseLoaded (Configs.initBase model.now id)
             )
 
-        Just Route.NotFound ->
+        Just (Route.NotFound) ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just Route.Rules ->
-            ( { model | pageState = Loaded (Blank "Rules") }, Cmd.none )
+        Just (Route.Rules) ->
+            ( { model | pageState = TransitioningFrom <| getPage model.pageState }
+            , Task.attempt RulesLoaded Rules.init
+            )
 
 
 
@@ -206,9 +215,8 @@ view model =
             [ content
             , footer []
                 []
-
-            --[ div [ class "debug" ] [ text (toString model) ]
-            --]
+              --[ div [ class "debug" ] [ text (toString model) ]
+              --]
             ]
 
 
@@ -240,6 +248,11 @@ viewPage isLoading page route =
             NotFound ->
                 Blank.view "Not Found"
                     |> frame "not-found"
+
+            Rules subModel ->
+                Rules.view subModel
+                    |> Html.map RulesMsg
+                    |> frame "rules"
 
 
 

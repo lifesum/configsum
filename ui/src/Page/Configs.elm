@@ -291,7 +291,7 @@ viewConfig now config showAdd parameter error =
         div []
             [ h1 []
                 [ text "Configs/Base/"
-                , span [ class "highlight" ] [ text config.name ]
+                , strong [ class "highlight" ] [ text config.name ]
                 ]
             , View.Error.view error
             , viewMeta config now
