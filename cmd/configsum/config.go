@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -36,7 +34,6 @@ func runConfig(args []string, logger log.Logger) error {
 
 		authMethod    = flagset.String("auth", authSimple, "User authenticaiton method to use (dory, simple)")
 		dorySecret    = flagset.String("dory.secret", "", "Shared secret for Dory Authentication middleware")
-		baseState     = flagset.String("base.state", "", "Initial base_config repo state")
 		intrumentAddr = flagset.String("instrument.addir", ":8701", "Listen address for instrumentation")
 		listenAddr    = flagset.String("listen.addr", ":8700", "Listen address for HTTP API")
 		postgresURI   = flagset.String("postgres.uri", defaultPostgresURI, "URI for Posgres connection")
@@ -72,42 +69,12 @@ func runConfig(args []string, logger log.Logger) error {
 		return err
 	}
 
-	// Setup repos.
-	var state config.InmemBaseState
-
-	// TODO(xla): Temporary solution to set up base configs without proper repo
-	// integration.
-	if *baseState != "" {
-		f, err := os.Open(*baseState)
-		if err != nil {
-			return err
-		}
-
-		t := struct {
-			ClientID   string                 `json:"clientID"`
-			ID         string                 `json:"id"`
-			Name       string                 `json:"name"`
-			Parameters map[string]interface{} `json:"rendered"`
-		}{}
-
-		err = json.NewDecoder(f).Decode(&t)
-		if err != nil {
-			return err
-		}
-
-		state = config.InmemBaseState{
-			t.ClientID: map[string]config.BaseConfig{
-				t.Name: config.BaseConfig{
-					ClientID:   t.ClientID,
-					ID:         t.ID,
-					Name:       t.Name,
-					Parameters: t.Parameters,
-				},
-			},
-		}
-	}
-
-	baseRepo := config.NewInmemBaseRepo(state)
+	baseRepo := config.NewPostgresBaseRepo(db)
+	baseRepo = config.NewBaseRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConsole),
+		storeRepo,
+	)(baseRepo)
+	baseRepo = config.NewBaseRepoLogMiddleware(logger, storeRepo)(baseRepo)
 
 	userRepo := config.NewPostgresUserRepo(db)
 	userRepo = config.NewUserRepoInstrumentMiddleware(
