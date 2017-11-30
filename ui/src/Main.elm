@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Html exposing (Html, div, footer, h1, text)
+import Html.Attributes exposing (class)
 import Navigation
 import Task
 import Time exposing (Time)
@@ -141,6 +142,15 @@ update msg model =
             ( RulesLoaded (Ok subModel), _ ) ->
                 ( { model | pageState = Loaded (Rules subModel) }, Cmd.none )
 
+            ( RuleLoaded (Err error), _ ) ->
+                ( { model | pageState = Loaded (Errored error) }, Cmd.none )
+
+            ( RuleLoaded (Ok subModel), _ ) ->
+                ( { model | pageState = Loaded (Rules subModel) }, Cmd.none )
+
+            ( RulesMsg subMsg, Rules subModel ) ->
+                toPage Rules RulesMsg Rules.update subMsg subModel
+
             ( SetRoute route, _ ) ->
                 ( model, navigate route )
 
@@ -169,30 +179,35 @@ setRoute maybeRoute model =
         Nothing ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just (Route.Clients) ->
-            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
+        Just Route.Clients ->
+            ( { model | pageState = TransitioningFrom <| getPage model.pageState }
             , Task.attempt ClientsLoaded Clients.init
             )
 
-        Just (Route.Configs) ->
+        Just Route.Configs ->
             ( model, navigate Route.ConfigsBase )
 
-        Just (Route.ConfigsBase) ->
-            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
+        Just Route.ConfigsBase ->
+            ( { model | pageState = TransitioningFrom <| getPage model.pageState }
             , Task.attempt ConfigsLoaded (Configs.init model.now)
             )
 
         Just (Route.ConfigBase id) ->
-            ( { model | pageState = TransitioningFrom (getPage model.pageState) }
-            , Task.attempt ConfigBaseLoaded (Configs.initBase model.now id)
+            ( { model | pageState = TransitioningFrom <| getPage model.pageState }
+            , Task.attempt ConfigBaseLoaded <| Configs.initBase model.now id
             )
 
-        Just (Route.NotFound) ->
+        Just Route.NotFound ->
             ( { model | pageState = Loaded NotFound }, Cmd.none )
 
-        Just (Route.Rules) ->
+        Just Route.Rules ->
             ( { model | pageState = TransitioningFrom <| getPage model.pageState }
-            , Task.attempt RulesLoaded Rules.init
+            , Task.attempt RulesLoaded Rules.initList
+            )
+
+        Just (Route.Rule id) ->
+            ( { model | pageState = TransitioningFrom <| getPage model.pageState }
+            , Task.attempt RuleLoaded <| Rules.initRule id
             )
 
 
@@ -214,9 +229,8 @@ view model =
         div []
             [ content
             , footer []
-                []
-              --[ div [ class "debug" ] [ text (toString model) ]
-              --]
+                [ div [ class "debug" ] [ text (toString model) ]
+                ]
             ]
 
 

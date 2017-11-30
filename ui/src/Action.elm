@@ -17,5 +17,6 @@ type Msg
     | LoadPage (Maybe Route)
     | RulesLoaded (Result PageLoadError Rules.Model)
     | RulesMsg Rules.Msg
+    | RuleLoaded (Result PageLoadError Rules.Model)
     | SetRoute Route
     | Tick Time

@@ -1,4 +1,4 @@
-module Route exposing (Route(..), fromLocation, href, navigate)
+module Route exposing (Route(..), active, fromLocation, href, navigate)
 
 import Html exposing (Attribute)
 import Html.Attributes
@@ -13,6 +13,7 @@ type Route
     | ConfigBase String
     | NotFound
     | Rules
+    | Rule String
 
 
 routes : Parser (Route -> a) a
@@ -24,6 +25,7 @@ routes =
         , map ConfigsBase (s "configs" </> s "base")
         , map ConfigBase (s "configs" </> s "base" </> string)
         , map Rules (s "rules")
+        , map Rule (s "rules" </> string)
         ]
 
 
@@ -49,12 +51,31 @@ routeToString route =
 
                 Rules ->
                     [ "rules" ]
+
+                Rule id ->
+                    [ "rules", id ]
     in
         String.join "/" pieces
 
 
 
 -- HELPERS --
+
+
+active : Route -> Route
+active route =
+    case route of
+        ConfigsBase ->
+            Configs
+
+        ConfigBase _ ->
+            Configs
+
+        Rule _ ->
+            Rules
+
+        _ ->
+            route
 
 
 fromLocation : Location -> Maybe Route

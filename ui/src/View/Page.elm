@@ -27,17 +27,12 @@ viewHeader route =
             ]
         , nav []
             [ ul []
-                [ viewNavLink (activeRoute route) Route.Clients [ text "clients" ]
-                , viewNavLink (activeRoute route) Route.Configs [ text "configs" ]
-                , viewNavLink (activeRoute route) Route.Rules [ text "rules" ]
+                [ viewNavLink (Route.active route) Route.Clients [ text "clients" ]
+                , viewNavLink (Route.active route) Route.Configs [ text "configs" ]
+                , viewNavLink (Route.active route) Route.Rules [ text "rules" ]
                 ]
             ]
         ]
-
-
-viewFooter : Html Msg
-viewFooter =
-    footer [] []
 
 
 viewNavLink : Route -> Route -> List (Html Msg) -> Html Msg
@@ -54,19 +49,6 @@ viewNavLink activeRoute route content =
 
 
 -- ATTRIBUTES
-
-
-activeRoute : Route -> Route
-activeRoute route =
-    case route of
-        Route.ConfigsBase ->
-            Route.Configs
-
-        Route.ConfigBase _ ->
-            Route.Configs
-
-        _ ->
-            route
 
 
 onClickRoute : Route -> Attribute Msg
