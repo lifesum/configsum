@@ -19,36 +19,38 @@ public struct User: Codable {
     }
 }
 
+public struct OS: Codable {
+    let platform: Platform
+    let version: String
+}
+
+public struct Location: Codable {
+    let locale: String
+    let timezoneOffset: Int
+}
+
+public struct App: Codable {
+    let version: String
+}
+
+public struct Device: Codable {
+    let location: Location
+    let os: OS
+}
+
 public class Context: Codable {
-    private let metadata: Metadata?
-    private let app: App
-    private let device: Device
-    private let user: User?
+    public let metadata: Metadata?
+    public let app: App
+    public let device: Device
+    public let user: User?
+    public let os: OS
+    public let location: Location
     
     enum CodingKeys: String, CodingKey {
         case app
         case device
         case metadata
         case user
-    }
-    
-    private struct App: Codable {
-        let version: String
-    }
-    
-    private struct OS: Codable {
-        let platform: Platform
-        let version: String
-    }
-    
-    private struct Location: Codable {
-        let locale: String
-        let timezoneOffset: Int
-    }
-    
-    private struct Device: Codable {
-        let location: Location
-        let os: OS
     }
     
     public init(appVersion: String,
@@ -59,8 +61,8 @@ public class Context: Codable {
                 user: User?) {
         let secondsOffset = TimeZone.current.secondsFromGMT()
         
-        let location = Location(locale: locale.identifier, timezoneOffset: secondsOffset)
-        let os = OS(platform: platform,
+        self.location = Location(locale: locale.identifier, timezoneOffset: secondsOffset)
+        self.os = OS(platform: platform,
                     version: osVersion)
         self.app = App(version: appVersion)
         self.device = Device(location: location,
@@ -75,6 +77,8 @@ public class Context: Codable {
         self.device = try container.decode(Device.self, forKey: .device)
         self.metadata = try container.decodeIfPresent(Metadata.self, forKey: .metadata)
         self.user = try container.decodeIfPresent(User.self, forKey: .user)
+        self.os = self.device.os
+        self.location = self.device.location
     }
     
     public func encode(to encoder: Encoder) throws {
