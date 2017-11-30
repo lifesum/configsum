@@ -12,7 +12,7 @@ public enum Platform: String, Codable {
 }
 
 public struct User: Codable {
-    private let age: Int?
+    public let age: Int?
     
     public init(age: Int? = nil) {
         self.age = age
@@ -20,22 +20,22 @@ public struct User: Codable {
 }
 
 public struct OS: Codable {
-    let platform: Platform
-    let version: String
+    public let platform: Platform
+    public let version: String
 }
 
 public struct Location: Codable {
-    let locale: String
-    let timezoneOffset: Int
+    public let locale: String
+    public let timezoneOffset: Int
 }
 
 public struct App: Codable {
-    let version: String
+    public let version: String
 }
 
 public struct Device: Codable {
-    let location: Location
-    let os: OS
+    public let location: Location
+    public let os: OS
 }
 
 public class Context: Codable {
