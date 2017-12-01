@@ -127,6 +127,11 @@ class IntegrationTests: XCTestCase {
         }
         waitForExpectations(timeout: 10.0, handler: nil)
     }
+    
+    func testGetRawConfig() {
+        let rawConfig = self.configsum.getRawConfig()
+        XCTAssertNotNil(rawConfig)
+    }
 }
 
 

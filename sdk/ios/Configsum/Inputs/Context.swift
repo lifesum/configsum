@@ -12,45 +12,45 @@ public enum Platform: String, Codable {
 }
 
 public struct User: Codable {
-    public let age: Int?
+    let age: Int?
     
     public init(age: Int? = nil) {
         self.age = age
     }
 }
 
-public struct OS: Codable {
-    public let platform: Platform
-    public let version: String
-}
-
-public struct Location: Codable {
-    public let locale: String
-    public let timezoneOffset: Int
-}
-
-public struct App: Codable {
-    public let version: String
-}
-
-public struct Device: Codable {
-    public let location: Location
-    public let os: OS
-}
-
 public class Context: Codable {
-    public let metadata: Metadata?
-    public let app: App
-    public let device: Device
-    public let user: User?
-    public let os: OS
-    public let location: Location
+    private let metadata: Metadata?
+    private let app: App
+    private let device: Device
+    private let user: User?
+    private let os: OS
+    private let location: Location
     
     enum CodingKeys: String, CodingKey {
         case app
         case device
         case metadata
         case user
+    }
+    
+    private struct OS: Codable {
+        let platform: Platform
+        let version: String
+    }
+    
+    private struct Location: Codable {
+        let locale: String
+        let timezoneOffset: Int
+    }
+    
+    private struct App: Codable {
+        let version: String
+    }
+    
+    private struct Device: Codable {
+        let location: Location
+        let os: OS
     }
     
     public init(appVersion: String,
@@ -87,5 +87,14 @@ public class Context: Codable {
         try container.encode(device, forKey: .device)
         try container.encodeIfPresent(metadata, forKey: .metadata)
         try container.encodeIfPresent(user, forKey: .user)
+    }
+}
+
+extension Context: CustomStringConvertible {
+    public var description: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .prettyPrinted
+        let result = try! encoder.encode(self)
+        return String(data: result, encoding: .utf8)!
     }
 }

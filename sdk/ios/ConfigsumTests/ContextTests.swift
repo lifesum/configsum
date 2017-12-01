@@ -94,4 +94,18 @@ class ContextTests: XCTestCase {
         
         XCTAssertEqual(resultString, expectedString)
     }
+    
+    func testStringRepresentationOfContextObject() {
+        let context = Context(appVersion: "8.6.0",
+                              locale: Locale.current,
+                              platform: .iOS,
+                              osVersion: "11.0",
+                              metadata: ["name": "testName",
+                                         "age": 22,
+                                         "nestedDictionary": ["nestedStringList": ["item1", "item2"],
+                                                              "nestedBool": true]],
+                              user: User(age: 20))
+        let resultString = String(data: try! encoder.encode(context), encoding: .utf8)!
+        XCTAssertEqual(resultString, context.description)
+    }
 }
