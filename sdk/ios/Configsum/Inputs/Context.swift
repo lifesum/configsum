@@ -19,11 +19,11 @@ public enum Subscription: Int, Codable {
 public struct User: Codable {
     public let age: Int?
     public let registered: String?
-    public let subscription: Subscription?
+    public let subscription: Int?
     
     public init(age: Int? = nil,
                 registered: String? = nil,
-                subscription: Subscription? = nil) {
+                subscription: Int? = nil) {
         self.age = age
         self.registered = registered
         self.subscription = subscription
