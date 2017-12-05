@@ -11,11 +11,22 @@ public enum Platform: String, Codable {
     case watchOS = "WatchOS"
 }
 
+public enum Subscription: Int, Codable {
+    case free = 0
+    case premium
+}
+
 public struct User: Codable {
-    let age: Int?
+    public let age: Int?
+    public let registered: String?
+    public let subscription: Subscription?
     
-    public init(age: Int? = nil) {
+    public init(age: Int? = nil,
+                registered: String? = nil,
+                subscription: Subscription? = nil) {
         self.age = age
+        self.registered = registered
+        self.subscription = subscription
     }
 }
 
