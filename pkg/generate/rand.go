@@ -70,3 +70,13 @@ func randomBytes(src rand.Source, bytes string, n int) []byte {
 
 	return b
 }
+
+// RandomInt returns a generated int in the range >= min, <= max
+func RandomInt() int {
+	var (
+		min = 1
+		max = 100
+	)
+	rand.Seed(time.Now().UnixNano())
+	return min + rand.Intn(max-min+1)
+}

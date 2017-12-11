@@ -9,6 +9,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/rule"
 )
 
@@ -142,7 +143,7 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID])
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandomInt)
 		if err != nil {
 			switch errors.Cause(err) {
 			case errors.ErrRuleNoMatch:

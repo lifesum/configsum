@@ -62,6 +62,9 @@ type lifecycle interface {
 	teardown() error
 }
 
+// RandIntGenerate generates a random integer in the range [min, max]
+type RandIntGenerate func() int
+
 // Rule facilitates the overide of base configs with consumer provided parameters.
 type Rule struct {
 	active      bool
@@ -152,8 +155,8 @@ func (r Rule) validate() error {
 }
 
 // Run given an input params and context will try to match based on the rules
-// Criteria and if matched overrides the input params with the its own.
-func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, []int, error) {
+// Criteria and if matched overrides the input params with its own.
+func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt RandIntGenerate) (Parameters, []int, error) {
 	if r.criteria != nil && r.criteria.User != nil {
 		if r.criteria.User.Age != nil {
 			return nil, nil, errors.New("matching user age not implemented")
@@ -171,7 +174,17 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, [
 		}
 	}
 
-	params := Parameters{}
+	var (
+		params = Parameters{}
+		d      = decisions
+	)
+
+	var diceRollout int
+	if len(decisions) > 0 {
+		diceRollout = decisions[0]
+	} else {
+		diceRollout = randInt()
+	}
 
 	switch r.kind {
 	case KindOverride:
@@ -179,12 +192,18 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, [
 	case KindExperiment:
 		return Parameters{}, nil, errors.New("experiment based rules not implemented")
 	case KindRollout:
-		return Parameters{}, nil, errors.New("rollout based rules not implemented")
+		d = append(d, diceRollout)
+
+		if diceRollout <= int(r.rollout) {
+			params = r.buckets[0].Parameters
+		} else {
+			return nil, nil, errors.Wrap(errors.ErrRuleNotInRollout, "rollout percentage")
+		}
 	}
 
 	for name, value := range params {
 		input[name] = value
 	}
 
-	return input, nil, nil
+	return input, d, nil
 }
