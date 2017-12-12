@@ -2,8 +2,8 @@ package rule
 
 import "testing"
 
-func TestInmemRepoGetNotFound(t *testing.T) {
-	testRepoGetNotFound(t, prepareInmemRepo)
+func TestInmemRepoGetByIDNotFound(t *testing.T) {
+	testRepoGetByIDNotFound(t, prepareInmemRepo)
 }
 
 func TestInmemRepoCreateDuplicate(t *testing.T) {

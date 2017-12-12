@@ -121,7 +121,7 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	r, err := repo.GetByName(rule.configID, rule.name)
+	r, err := repo.GetByID(rule.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,14 +155,8 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 	}
 }
 
-func testRepoGetNotFound(t *testing.T, p prepareFunc) {
-	var (
-		configID = generate.RandomString(24)
-		name     = generate.RandomString(24)
-		repo     = p(t)
-	)
-
-	_, err := repo.GetByName(configID, name)
+func testRepoGetByIDNotFound(t *testing.T, p prepareFunc) {
+	_, err := p(t).GetByID(generate.RandomString(12))
 	if have, want := errors.Cause(err), errors.ErrNotFound; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -432,7 +426,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rl, err := repo.GetByName(updatedRule.configID, updatedRule.name)
+	rl, err := repo.GetByID(updatedRule.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -719,7 +713,7 @@ func testRepoCreateRollout(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	retrieved, err := repo.GetByName(configID, name)
+	retrieved, err := repo.GetByID(rule.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

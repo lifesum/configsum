@@ -14,6 +14,7 @@ import (
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
 	"github.com/lifesum/configsum/pkg/instrument"
+	"github.com/lifesum/configsum/pkg/rule"
 	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 	"github.com/lifesum/configsum/pkg/ui"
 )
@@ -70,6 +71,13 @@ func runConsole(args []string, logger log.Logger) error {
 	)(clientRepo)
 	clientRepo = client.NewRepoLogMiddleware(logger, storeRepo)(clientRepo)
 
+	ruleRepo := rule.NewPostgresRepo(db)
+	ruleRepo = rule.NewRuleRepoInstrumentMiddleware(
+		instrument.ObserveRepo(instrumentNamespace, taskConfig),
+		storeRepo,
+	)(ruleRepo)
+	ruleRepo = rule.NewRuleRepoLogMiddleware(logger, storeRepo)(ruleRepo)
+
 	tokenRepo := client.NewPostgresTokenRepo(db)
 	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
@@ -80,8 +88,10 @@ func runConsole(args []string, logger log.Logger) error {
 	var (
 		baseConfigSVC    = config.NewBaseService(baseRepo, clientRepo)
 		clientSVC        = client.NewService(clientRepo, tokenRepo)
+		ruleSVC          = rule.NewService(ruleRepo)
 		prefixBaseConfig = "/api/configs/base"
 		prefixClient     = "/api/clients"
+		prefixRule       = "/api/rules"
 		serveMux         = http.NewServeMux()
 		opts             = []kithttp.ServerOption{
 			kithttp.ServerBefore(kithttp.PopulateRequestContext),
@@ -108,6 +118,13 @@ func runConsole(args []string, logger log.Logger) error {
 		http.StripPrefix(
 			prefixClient,
 			client.MakeHandler(clientSVC, opts...),
+		),
+	)
+	serveMux.Handle(
+		fmt.Sprintf("%s/", prefixRule),
+		http.StripPrefix(
+			prefixRule,
+			rule.MakeHandler(ruleSVC, opts...),
 		),
 	)
 	serveMux.Handle("/", ui.MakeHandler(logger, *uiBase, *uiLocal))

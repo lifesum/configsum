@@ -48,7 +48,7 @@ type Repo interface {
 	lifecycle
 
 	Create(input Rule) (Rule, error)
-	GetByName(configID, name string) (Rule, error)
+	GetByID(string) (Rule, error)
 	UpdateWith(input Rule) (Rule, error)
 	ListAll() ([]Rule, error)
 	ListActive(configID string, now time.Time) ([]Rule, error)
