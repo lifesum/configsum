@@ -1,14 +1,17 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/instrument"
@@ -25,6 +28,46 @@ const (
 const (
 	headerContentType = "Content-Type"
 )
+
+// DecodeJSONSchema validates the request payload against the given schema and
+// returns an invalid payload error in case the validation fails.
+func DecodeJSONSchema(
+	next kithttp.DecodeRequestFunc,
+	schema *gojsonschema.Schema,
+) kithttp.DecodeRequestFunc {
+	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+		// Attempts to work with gojsonschema.NewReaderLoader turned out to
+		// lead to inexplicable io errors. While less elegant it works for
+		// now. Be aware of the re-assignment of the request body so
+		// subsequent decode functions can function properly.
+		raw, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(raw) == 0 {
+			return nil, errors.Wrap(errors.ErrInvalidPayload, "empty body")
+		}
+		res, err := schema.Validate(gojsonschema.NewBytesLoader(raw))
+		if nil != err {
+			return nil, errors.Wrap(errors.ErrInvalidPayload, err.Error())
+		}
+
+		if !res.Valid() {
+			err := errors.ErrInvalidPayload
+
+			for _, e := range res.Errors() {
+				err = errors.Wrap(err, e.String())
+			}
+
+			return nil, err
+		}
+
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(raw))
+
+		return next(ctx, r)
+	}
+}
 
 // ErrorEncoder translates domain specific errors to HTTP status codes.
 func ErrorEncoder(_ context.Context, err error, w http.ResponseWriter) {
