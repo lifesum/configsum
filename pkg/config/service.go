@@ -143,7 +143,7 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandomInt)
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandPercentage(nil))
 		if err != nil {
 			switch errors.Cause(err) {
 			case errors.ErrRuleNoMatch:

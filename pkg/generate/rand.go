@@ -71,12 +71,16 @@ func randomBytes(src rand.Source, bytes string, n int) []byte {
 	return b
 }
 
-// RandomInt returns a generated int in the range >= min, <= max
-func RandomInt() int {
-	var (
-		min = 1
-		max = 100
-	)
-	rand.Seed(time.Now().UnixNano())
-	return min + rand.Intn(max-min+1)
+// RandPercentageFunc is the integer returned by RandomInt() which represents the rollout percentage
+type RandPercentageFunc func() int
+
+// RandPercentage returns a RandPercentage func that generates int in the range [min, max]
+func RandPercentage(r *rand.Rand) RandPercentageFunc {
+	if r == nil {
+		r = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
+
+	return func() int {
+		return r.Intn(99) + 1
+	}
 }

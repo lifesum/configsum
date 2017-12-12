@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 )
 
 // Supported kinds of rules.
@@ -156,7 +157,7 @@ func (r Rule) validate() error {
 
 // Run given an input params and context will try to match based on the rules
 // Criteria and if matched overrides the input params with its own.
-func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt RandIntGenerate) (Parameters, []int, error) {
+func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt generate.RandPercentageFunc) (Parameters, []int, error) {
 	if r.criteria != nil && r.criteria.User != nil {
 		if r.criteria.User.Age != nil {
 			return nil, nil, errors.New("matching user age not implemented")
@@ -179,11 +180,9 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt RandIn
 		d      = decisions
 	)
 
-	var diceRollout int
-	if len(decisions) > 0 {
+	diceRollout := randInt()
+	if len(decisions) != 0 {
 		diceRollout = decisions[0]
-	} else {
-		diceRollout = randInt()
 	}
 
 	switch r.kind {
@@ -192,7 +191,11 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt RandIn
 	case KindExperiment:
 		return Parameters{}, nil, errors.New("experiment based rules not implemented")
 	case KindRollout:
-		d = append(d, diceRollout)
+		if len(decisions) != 0 {
+			d = decisions
+		} else {
+			d = append(d, diceRollout)
+		}
 
 		if diceRollout <= int(r.rollout) {
 			params = r.buckets[0].Parameters
