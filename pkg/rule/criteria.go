@@ -27,18 +27,43 @@ type Criteria struct {
 
 // CriteriaUser holds all relevant matchers concerning a user.
 type CriteriaUser struct {
-	Age *matcher
-	ID  *MatcherStringList
+	Age          *matcher
+	ID           *MatcherStringList
+	Subscription *MatcherInt
 }
 
-type matcherBool struct {
-	comparator comparator
-	value      bool
+// MatcherBool defines methods for matching a rule on bool type
+type MatcherBool struct {
+	value bool
 }
 
-type matcherInt struct {
+func (m MatcherBool) match(input interface{}) (bool, error) {
+	t, ok := input.(bool)
+	if !ok {
+		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != bool", reflect.TypeOf(input).Kind())
+	}
+
+	return t == m.value, nil
+}
+
+// MatcherInt defines methods for matching a rule on int type
+type MatcherInt struct {
 	comparator comparator
 	value      int
+}
+
+func (m MatcherInt) match(input interface{}) (bool, error) {
+	t, ok := input.(int)
+	if !ok {
+		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != int", reflect.TypeOf(input).Kind())
+	}
+
+	switch m.comparator {
+	case comparatorGT:
+		return t > m.value, nil
+	default:
+		return false, nil
+	}
 }
 
 type matcherString struct {
@@ -50,6 +75,7 @@ type matcherListInt struct {
 	value []int
 }
 
+// MatcherStringList defines methods for matching a rule on string list type
 type MatcherStringList []string
 
 func (m MatcherStringList) match(input interface{}) (bool, error) {

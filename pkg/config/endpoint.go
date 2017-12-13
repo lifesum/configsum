@@ -198,8 +198,15 @@ func (l *location) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+type user struct {
+	Age          uint8
+	Registered   string
+	Subscription int
+}
+
 type userRenderContext struct {
 	Device device `json:"device"`
+	User   user   `json:"user"`
 }
 
 type userRenderRequest struct {

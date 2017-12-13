@@ -139,7 +139,10 @@ func (s *userService) Render(
 	for _, r := range rs {
 		ctx := rule.Context{
 			User: rule.ContextUser{
-				ID: userID,
+				ID:           userID,
+				Age:          ctx.User.Age,
+				Registered:   ctx.User.Registered,
+				Subscription: ctx.User.Subscription,
 			},
 		}
 

@@ -36,8 +36,10 @@ type Context struct {
 
 // ContextUser bundles user information for rule criteria to match.
 type ContextUser struct {
-	Age uint8
-	ID  string
+	Age          uint8
+	ID           string
+	Registered   string
+	Subscription int
 }
 
 // Decisions reflects a matrix of rules applied to a config and if present the
@@ -171,6 +173,17 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt genera
 
 			if !ok {
 				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "user id")
+			}
+		}
+
+		if r.criteria.User.Subscription != nil {
+			ok, err := r.criteria.User.Subscription.match(ctx.User.Subscription)
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "subscription match")
+			}
+
+			if !ok {
+				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "subscription")
 			}
 		}
 	}
