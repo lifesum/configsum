@@ -21,11 +21,12 @@ import Html
 import Html.Attributes exposing (class, classList, colspan)
 import Html.Events exposing (onClick)
 import Http
+import Json.Decode as Decode
 import Task exposing (Task)
 import Time exposing (Time)
 import Data.Parameter exposing (Parameter(..))
-import Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(Experiment, Override, Rollout), Rule)
-import Page.Errored exposing (PageLoadError)
+import Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(Experiment, Override, Rollout), Rule, decoder)
+import Page.Errored exposing (PageLoadError, pageLoadError)
 import View.Date
 import View.Error
 import View.Parameter
@@ -51,21 +52,33 @@ initList now =
 
 initRule : Time -> String -> Task PageLoadError Model
 initRule now id =
-    let
-        buckets =
-            [ Bucket [ BoolParameter "feature_say-cheese_toggled" True ]
-            ]
+    case (Decode.decodeString decoder testRulePayload) of
+        Err err ->
+            Task.fail <| pageLoadError "Rules" (Http.BadUrl err)
 
-        criteria =
-            Criteria <| Just (CriteriaUser testIds)
+        Ok rule ->
+            Task.succeed <| Model Nothing now (Just rule) [] False
 
-        date =
-            Date.fromTime 0
 
-        rule =
-            Rule True date buckets "01C066T0E4W2TM66RPPS6B0WN6" date (Just criteria) "Enable say cheese for staff members." date "01C068XFHXXRZSFHGX2A3JAB7O" Override "override_say-cheese_staff" 0 date date
-    in
-        Task.succeed <| Model Nothing now (Just rule) [] False
+testRulePayload : String
+testRulePayload =
+    """
+    { "active": true
+    , "activated_at": null
+    , "buckets":
+        [ { "name": "default", "parameters": [ { "name": "feature_say-cheese_toggled", "type": "bool", "value": true } ], "percentage": 0 }
+        ]
+    , "config_id": "01C066T0E4W2TM66RPPS6B0WN6"
+    , "created_at": "2017-12-01T14:05:23.077Z"
+    , "criteria": { "user": { "id": [ "123" ] } }
+    , "description": "Enable say cheese for staff members."
+    , "id": "01C068XFHXXRZSFHGX2A3JAB7O"
+    , "kind": 1
+    , "name": "override_say-cheese_staff"
+    , "rollout": 0
+    , "updated_at": "2017-12-01T14:05:23.077Z"
+    }
+    """
 
 
 testList : List Rule

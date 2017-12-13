@@ -1,7 +1,10 @@
-module Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(..), Rule)
+module Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(..), Rule, decoder)
 
 import Date exposing (Date)
 import Data.Parameter exposing (Parameter)
+import Json.Decode as Decode exposing (Decoder, andThen, fail, succeed)
+import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
+import Data.Parameter exposing (Parameter(..))
 
 
 type Kind
@@ -41,3 +44,75 @@ type alias Rule =
     , startTime : Date
     , updatedAt : Date
     }
+
+
+decoder : Decoder Rule
+decoder =
+    decode Rule
+        |> required "active" Decode.bool
+        |> optional "activated_at" date (Date.fromTime 0)
+        |> required "buckets" (Decode.list decodeBucket)
+        |> required "config_id" Decode.string
+        |> required "created_at" date
+        |> optional "criteria" (Decode.map Just decodeCriteria) Nothing
+        |> required "description" Decode.string
+        |> optional "end_time" date (Date.fromTime 0)
+        |> required "id" Decode.string
+        |> required "kind" (Decode.int |> andThen decodeKind)
+        |> required "name" Decode.string
+        |> required "rollout" Decode.int
+        |> optional "start_time" date (Date.fromTime 0)
+        |> required "updated_at" date
+
+
+decodeBucket : Decoder Bucket
+decodeBucket =
+    decode Bucket
+        |> required "parameters" (Decode.list Data.Parameter.decoder)
+
+
+decodeCriteria : Decoder Criteria
+decodeCriteria =
+    decode Criteria
+        |> optional "user" (Decode.map Just decodeCriteriaUser) Nothing
+
+
+decodeCriteriaUser : Decoder CriteriaUser
+decodeCriteriaUser =
+    decode CriteriaUser
+        |> optional "id" (Decode.list Decode.string) []
+
+
+decodeKind : Int -> Decoder Kind
+decodeKind raw =
+    case raw of
+        1 ->
+            succeed Override
+
+        2 ->
+            succeed Experiment
+
+        3 ->
+            succeed Rollout
+
+        _ ->
+            fail "unsupported kind"
+
+
+
+-- HELPER
+
+
+date : Decoder Date
+date =
+    let
+        convert : String -> Decoder Date
+        convert raw =
+            case Date.fromString raw of
+                Ok date ->
+                    succeed date
+
+                Err error ->
+                    fail error
+    in
+        Decode.string |> andThen convert
