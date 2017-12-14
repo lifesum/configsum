@@ -63,9 +63,6 @@ type lifecycle interface {
 	teardown() error
 }
 
-// RandIntGenerate generates a random integer in the range [min, max]
-type RandIntGenerate func() int
-
 // Rule facilitates the overide of base configs with consumer provided parameters.
 type Rule struct {
 	active      bool
@@ -83,6 +80,7 @@ type Rule struct {
 	rollout     uint8
 	startTime   time.Time
 	updatedAt   time.Time
+	RandFunc    generate.RandPercentageFunc
 }
 
 // New returns a valid rule.
@@ -92,6 +90,8 @@ func New(
 	active bool,
 	criteria *Criteria,
 	buckets []Bucket,
+	rollout *uint8,
+	randFunc generate.RandPercentageFunc,
 ) (Rule, error) {
 	r := Rule{
 		active:      active,
@@ -103,6 +103,11 @@ func New(
 		ID:          id,
 		kind:        kind,
 		name:        name,
+		RandFunc:    randFunc,
+	}
+
+	if rollout != nil {
+		r.rollout = *rollout
 	}
 
 	err := r.validate()
@@ -200,7 +205,7 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt genera
 		if diceRollout <= int(r.rollout) {
 			params = r.buckets[0].Parameters
 		} else {
-			return nil, nil, errors.Wrap(errors.ErrRuleNotInRollout, "rollout percentage")
+			return nil, d, errors.Wrap(errors.ErrRuleNotInRollout, "rollout percentage")
 		}
 	}
 

@@ -55,11 +55,12 @@ func TestRule(t *testing.T) {
 					},
 				},
 			},
-			kind: overrideKind,
+			kind:     overrideKind,
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	have, _, err := r.Run(input, ctx, nil, randIntGenerateTest)
+	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,12 +110,13 @@ func TestRuleDecisions(t *testing.T) {
 					},
 				},
 			},
-			kind:    rolloutKind,
-			rollout: uint8(randIntGenerateTest()),
+			kind:     rolloutKind,
+			rollout:  uint8(randIntGenerateTest()),
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	_, d, err := r.Run(input, ctx, nil, randIntGenerateTest)
+	_, d, err := r.Run(input, ctx, nil, r.RandFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,11 +163,12 @@ func TestRuleNoDecisions(t *testing.T) {
 					},
 				},
 			},
-			kind: rolloutKind,
+			kind:     rolloutKind,
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	_, _, err := r.Run(input, ctx, nil, randIntGenerateTest)
+	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
 	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -206,12 +209,13 @@ func TestRuleRollout(t *testing.T) {
 					},
 				},
 			},
-			kind:    rolloutKind,
-			rollout: uint8(randIntGenerateTest()),
+			kind:     rolloutKind,
+			rollout:  uint8(randIntGenerateTest()),
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	have, _, err := r.Run(input, ctx, nil, randIntGenerateTest)
+	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,12 +265,13 @@ func TestRuleRolloutOutsideBucket(t *testing.T) {
 					},
 				},
 			},
-			kind:    rolloutKind,
-			rollout: 37,
+			kind:     rolloutKind,
+			rollout:  37,
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	_, _, err := r.Run(input, ctx, nil, randIntGenerateTest)
+	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
 	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -520,7 +525,17 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rule, err := New(id.String(), configID, name, "", KindOverride, false, nil, buckets)
+	rule, err := New(
+		id.String(),
+		configID,
+		name, "",
+		KindOverride,
+		false,
+		nil,
+		buckets,
+		nil,
+		randIntGenerateTest,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -909,7 +924,18 @@ func testRepoCreateRollout(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rule, err := New(id.String(), configID, name, "", KindRollout, false, nil, buckets)
+	rule, err := New(
+		id.String(),
+		configID,
+		name,
+		"",
+		KindRollout,
+		false,
+		nil,
+		buckets,
+		nil,
+		randIntGenerateTest,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
