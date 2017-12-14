@@ -71,39 +71,19 @@ func (r baseListResponse) MarshalJSON() ([]byte, error) {
 	})
 }
 
-type responseParameter struct {
-	Name  string      `json:"name"`
-	Type  string      `json:"type"`
-	Value interface{} `json:"value"`
-}
-
-type responseParameters []responseParameter
-
-func (r responseParameters) Len() int {
-	return len(r)
-}
-
-func (r responseParameters) Less(i, j int) bool {
-	return r[i].Name > r[j].Name
-}
-
-func (r responseParameters) Swap(i, j int) {
-	r[i], r[j] = r[j], r[i]
-}
-
 type responseBaseConfig struct {
 	config BaseConfig
 }
 
 func (r responseBaseConfig) MarshalJSON() ([]byte, error) {
 	v := struct {
-		ClientID   string             `json:"client_id"`
-		Deleted    bool               `json:"deleted"`
-		ID         string             `json:"id"`
-		Name       string             `json:"name"`
-		Parameters responseParameters `json:"parameters"`
-		CreatedAt  time.Time          `json:"created_at"`
-		UpdatedAt  time.Time          `json:"updated_at"`
+		ClientID   string                  `json:"client_id"`
+		Deleted    bool                    `json:"deleted"`
+		ID         string                  `json:"id"`
+		Name       string                  `json:"name"`
+		Parameters rule.ResponseParameters `json:"parameters"`
+		CreatedAt  time.Time               `json:"created_at"`
+		UpdatedAt  time.Time               `json:"updated_at"`
 	}{
 		ClientID:  r.config.ClientID,
 		Deleted:   r.config.Deleted,
@@ -113,26 +93,13 @@ func (r responseBaseConfig) MarshalJSON() ([]byte, error) {
 		UpdatedAt: r.config.UpdatedAt,
 	}
 
-	ps := responseParameters{}
+	ps := rule.ResponseParameters{}
 
 	for k, val := range r.config.Parameters {
-		p := responseParameter{
+		ps = append(ps, rule.ResponseParameter{
 			Name:  k,
 			Value: val,
-		}
-
-		switch val.(type) {
-		case bool:
-			p.Type = "bool"
-		case float64:
-			p.Type = "number"
-		case string:
-			p.Type = "string"
-		default:
-			p.Type = "unknown"
-		}
-
-		ps = append(ps, p)
+		})
 	}
 
 	sort.Sort(ps)

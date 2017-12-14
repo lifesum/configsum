@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -67,19 +68,21 @@ type responseBucket struct {
 }
 
 func (r *responseBucket) MarshalJSON() ([]byte, error) {
-	ps := []responseParameter{}
+	ps := ResponseParameters{}
 
-	for k, v := range r.bucket.Parameters {
-		ps = append(ps, responseParameter{
-			key:   k,
-			value: v,
+	for n, v := range r.bucket.Parameters {
+		ps = append(ps, ResponseParameter{
+			Name:  n,
+			Value: v,
 		})
 	}
 
+	sort.Sort(ps)
+
 	return json.Marshal(struct {
-		Name       string              `json:"name"`
-		Parameters []responseParameter `json:"parameters"`
-		Percentage int                 `json:"percentage"`
+		Name       string             `json:"name"`
+		Parameters ResponseParameters `json:"parameters"`
+		Percentage int                `json:"percentage"`
 	}{
 		Name:       r.bucket.Name,
 		Parameters: ps,
@@ -89,9 +92,9 @@ func (r *responseBucket) MarshalJSON() ([]byte, error) {
 
 func (r *responseBucket) UnmarshalJSON(raw []byte) error {
 	v := struct {
-		Name       string              `json:"name"`
-		Parameters []responseParameter `json:"parameters"`
-		Percentage int                 `json:"percentage"`
+		Name       string             `json:"name"`
+		Parameters ResponseParameters `json:"parameters"`
+		Percentage int                `json:"percentage"`
 	}{}
 
 	if err := json.Unmarshal(raw, &v); err != nil {
@@ -101,7 +104,7 @@ func (r *responseBucket) UnmarshalJSON(raw []byte) error {
 	pm := Parameters{}
 
 	for _, p := range v.Parameters {
-		pm[p.key] = p.value
+		pm[p.Name] = p.Value
 	}
 
 	r.bucket = Bucket{
@@ -113,22 +116,25 @@ func (r *responseBucket) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-type responseParameter struct {
-	key   string
-	value interface{}
+// ResponseParameter used to represent a parameter on the wire.
+type ResponseParameter struct {
+	Name  string      `json:"name"`
+	Value interface{} `json:"value"`
 }
 
-func (r responseParameter) MarshalJSON() ([]byte, error) {
+// MarshalJSON to satisfy json.Marshaler and include the value type of the
+// parameter for clients to make easy decisions when materialising it.
+func (r ResponseParameter) MarshalJSON() ([]byte, error) {
 	v := struct {
 		Name  string      `json:"name"`
 		Type  string      `json:"type"`
 		Value interface{} `json:"value"`
 	}{
-		Name:  r.key,
-		Value: r.value,
+		Name:  r.Name,
+		Value: r.Value,
 	}
 
-	switch r.value.(type) {
+	switch r.Value.(type) {
 	case bool:
 		v.Type = "bool"
 	case float64:
@@ -142,20 +148,19 @@ func (r responseParameter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (r *responseParameter) UnmarshalJSON(raw []byte) error {
-	v := struct {
-		Name  string      `json:"name"`
-		Value interface{} `json:"value"`
-	}{}
+// ResponseParameters is a collection of ResponseParameter.
+type ResponseParameters []ResponseParameter
 
-	if err := json.Unmarshal(raw, &v); err != nil {
-		return err
-	}
+func (r ResponseParameters) Len() int {
+	return len(r)
+}
 
-	r.key = v.Name
-	r.value = v.Value
+func (r ResponseParameters) Less(i, j int) bool {
+	return r[i].Name > r[j].Name
+}
 
-	return nil
+func (r ResponseParameters) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
 }
 
 type responseRule struct {
