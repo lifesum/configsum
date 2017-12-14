@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -93,8 +94,8 @@ func TestRuleDeactivate(t *testing.T) {
 	rule, err := New(
 		id.String(),
 		configID,
-		"override_funky_staff",
-		"Overrides funky feature for all staff memebers",
+		generate.RandomString(12),
+		generate.RandomString(42),
 		KindOverride,
 		true,
 		nil,
@@ -128,6 +129,68 @@ func TestRuleDeactivate(t *testing.T) {
 	}
 
 	if have, want := updated.active, false; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	// Check for idempotency.
+	r.ServeHTTP(rec, req)
+
+	if have, want := rec.Code, http.StatusNoContent; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleUpdateRollout(t *testing.T) {
+	var (
+		configID = generate.RandomString(12)
+		repo     = preparePGRepo(t)
+		svc      = NewService(repo)
+		id, _    = ulid.New(ulid.Timestamp(time.Now()), seed)
+		payload  = bytes.NewBufferString(`{"rollout": 13}`)
+		target   = fmt.Sprintf("/%s/rollout", id.String())
+		req      = httptest.NewRequest("PUT", target, payload)
+		rec      = httptest.NewRecorder()
+		r        = MakeHandler(svc)
+	)
+
+	rule, err := New(
+		id.String(),
+		configID,
+		generate.RandomString(12),
+		generate.RandomString(42),
+		KindOverride,
+		true,
+		nil,
+		[]Bucket{
+			{
+				Name: "default",
+				Parameters: Parameters{
+					"feature_funky_toggle": true,
+				},
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = repo.Create(rule)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r.ServeHTTP(rec, req)
+
+	if have, want := rec.Code, http.StatusNoContent; have != want {
+		t.Fatalf("have %v, want %v", have, want)
+	}
+
+	updated, err := repo.GetByID(id.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := updated.rollout, uint8(13); have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 

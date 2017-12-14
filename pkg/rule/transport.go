@@ -2,6 +2,7 @@ package rule
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	kithttp "github.com/go-kit/kit/transport/http"
@@ -57,6 +58,18 @@ func MakeHandler(svc Service, opts ...kithttp.ServerOption) http.Handler {
 		),
 	)
 
+	r.Methods("PUT").Path(`/{id:[a-zA-Z0-9]+}/rollout`).Name("ruleUpdateRollout").Handler(
+		kithttp.NewServer(
+			updateRolloutEndpoint(svc),
+			decodeUpdateRolloutRequest,
+			kithttp.EncodeJSONResponse,
+			append(
+				opts,
+				kithttp.ServerBefore(extractMuxVars(varID)),
+			)...,
+		),
+	)
+
 	return r
 }
 
@@ -85,6 +98,23 @@ func decodeGetRequest(ctx context.Context, r *http.Request) (interface{}, error)
 	}
 
 	return getRequest{id: id}, nil
+}
+
+func decodeUpdateRolloutRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id, ok := ctx.Value(varID).(string)
+	if !ok {
+		return nil, errors.Wrap(errors.ErrVarMissing, "id")
+	}
+
+	v := struct {
+		Rollout uint8 `json:"rollout"`
+	}{}
+
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		return nil, errors.Wrapf(errors.ErrInvalidPayload, "%s", err)
+	}
+
+	return updateRolloutRequest{id: id, rollout: v.Rollout}, nil
 }
 
 func extractMuxVars(keys ...muxVar) kithttp.RequestFunc {

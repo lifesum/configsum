@@ -41,7 +41,7 @@ func deactivateEndpoint(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(deactivateRequest)
 
-		return activateResponse{}, svc.Deactivate(req.id)
+		return deactivateResponse{}, svc.Deactivate(req.id)
 	}
 }
 
@@ -251,4 +251,23 @@ func (r *responseRule) UnmarshalJSON(raw []byte) error {
 	}
 
 	return nil
+}
+
+type updateRolloutRequest struct {
+	id      string
+	rollout uint8
+}
+
+type updateRolloutResponse struct{}
+
+func (r updateRolloutResponse) StatusCode() int {
+	return http.StatusNoContent
+}
+
+func updateRolloutEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(updateRolloutRequest)
+
+		return updateRolloutResponse{}, svc.UpdateRollout(req.id, req.rollout)
+	}
 }
