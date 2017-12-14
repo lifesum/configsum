@@ -24,6 +24,7 @@ import Http
 import Json.Decode as Decode
 import Task exposing (Task)
 import Time exposing (Time)
+import Api.Rule as Api
 import Data.Parameter exposing (Parameter(..))
 import Data.Rule exposing (Bucket, Criteria, CriteriaUser, Kind(Experiment, Override, Rollout), Rule, decoder)
 import Page.Errored exposing (PageLoadError, pageLoadError)
@@ -52,12 +53,10 @@ initList now =
 
 initRule : Time -> String -> Task PageLoadError Model
 initRule now id =
-    case (Decode.decodeString decoder testRulePayload) of
-        Err err ->
-            Task.fail <| pageLoadError "Rules" (Http.BadUrl err)
-
-        Ok rule ->
-            Task.succeed <| Model Nothing now (Just rule) [] False
+    Api.getRule id
+        |> Http.toTask
+        |> Task.map (\rule -> Model Nothing now (Just rule) [] False)
+        |> Task.mapError (\err -> pageLoadError "Rules" err)
 
 
 testRulePayload : String
