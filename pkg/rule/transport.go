@@ -45,6 +45,18 @@ func MakeHandler(svc Service, opts ...kithttp.ServerOption) http.Handler {
 		),
 	)
 
+	r.Methods("PUT").Path(`/{id:[a-zA-Z0-9]+}/deactivate`).Name("ruleDeactivate").Handler(
+		kithttp.NewServer(
+			deactivateEndpoint(svc),
+			decodeDeactivateRequest,
+			kithttp.EncodeJSONResponse,
+			append(
+				opts,
+				kithttp.ServerBefore(extractMuxVars(varID)),
+			)...,
+		),
+	)
+
 	return r
 }
 
@@ -55,6 +67,15 @@ func decodeActivateRequest(ctx context.Context, r *http.Request) (interface{}, e
 	}
 
 	return activateRequest{id: id}, nil
+}
+
+func decodeDeactivateRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	id, ok := ctx.Value(varID).(string)
+	if !ok {
+		return nil, errors.Wrap(errors.ErrVarMissing, "id")
+	}
+
+	return deactivateRequest{id: id}, nil
 }
 
 func decodeGetRequest(ctx context.Context, r *http.Request) (interface{}, error) {

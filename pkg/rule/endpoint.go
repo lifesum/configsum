@@ -27,6 +27,24 @@ func activateEndpoint(svc Service) endpoint.Endpoint {
 	}
 }
 
+type deactivateRequest struct {
+	id string
+}
+
+type deactivateResponse struct{}
+
+func (r deactivateResponse) StatusCode() int {
+	return http.StatusNoContent
+}
+
+func deactivateEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(deactivateRequest)
+
+		return activateResponse{}, svc.Deactivate(req.id)
+	}
+}
+
 type getRequest struct {
 	id string
 }
