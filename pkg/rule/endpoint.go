@@ -3,18 +3,37 @@ package rule
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 )
+
+type activateRequest struct {
+	id string
+}
+
+type activateResponse struct{}
+
+func (r activateResponse) StatusCode() int {
+	return http.StatusNoContent
+}
+
+func activateEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(activateRequest)
+
+		return activateResponse{}, svc.Activate(req.id)
+	}
+}
 
 type getRequest struct {
 	id string
 }
 
 func getEndpoint(svc Service) endpoint.Endpoint {
-	return func(ctx context.Context, rqeuest interface{}) (interface{}, error) {
-		req := rqeuest.(getRequest)
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(getRequest)
 
 		r, err := svc.GetByID(req.id)
 		if err != nil {

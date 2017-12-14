@@ -2,7 +2,8 @@ package rule
 
 // Service for Rule interactions.
 type Service interface {
-	GetByID(string) (Rule, error)
+	Activate(id string) error
+	GetByID(id string) (Rule, error)
 }
 
 type service struct {
@@ -14,6 +15,23 @@ func NewService(repo Repo) Service {
 	return &service{
 		repo: repo,
 	}
+}
+
+func (s *service) Activate(id string) error {
+	r, err := s.repo.GetByID(id)
+	if err != nil {
+		return err
+	}
+
+	if r.active {
+		return nil
+	}
+
+	r.active = true
+
+	_, err = s.repo.UpdateWith(r)
+
+	return err
 }
 
 func (s *service) GetByID(id string) (Rule, error) {
