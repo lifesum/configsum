@@ -48,7 +48,10 @@ type alias Model =
 
 initList : Time -> Task PageLoadError Model
 initList now =
-    Task.succeed <| Model Nothing now Nothing testList False
+    Api.listRules
+        |> Http.toTask
+        |> Task.map (\rules -> Model Nothing now Nothing rules False)
+        |> Task.mapError (\err -> pageLoadError "Rules" err)
 
 
 initRule : Time -> String -> Task PageLoadError Model
@@ -57,52 +60,6 @@ initRule now id =
         |> Http.toTask
         |> Task.map (\rule -> Model Nothing now (Just rule) [] False)
         |> Task.mapError (\err -> pageLoadError "Rules" err)
-
-
-testRulePayload : String
-testRulePayload =
-    """
-    { "active": true
-    , "activated_at": null
-    , "buckets":
-        [ { "name": "default", "parameters": [ { "name": "feature_say-cheese_toggled", "type": "bool", "value": true } ], "percentage": 0 }
-        ]
-    , "config_id": "01C066T0E4W2TM66RPPS6B0WN6"
-    , "created_at": "2017-12-01T14:05:23.077Z"
-    , "criteria": { "user": { "id": [ "123" ] } }
-    , "description": "Enable say cheese for staff members."
-    , "id": "01C068XFHXXRZSFHGX2A3JAB7O"
-    , "kind": 1
-    , "name": "override_say-cheese_staff"
-    , "rollout": 0
-    , "updated_at": "2017-12-01T14:05:23.077Z"
-    }
-    """
-
-
-testList : List Rule
-testList =
-    [ testRule True "override" Override
-    , testRule False "rollout" Rollout
-    , testRule True "experiment" Experiment
-    ]
-
-
-testRule : Bool -> String -> Kind -> Rule
-testRule active name kind =
-    let
-        criteria =
-            Criteria <| Just (CriteriaUser testIds)
-
-        date =
-            Date.fromTime 0
-    in
-        Rule active date [] "config123" date Nothing "" date "id123" kind name 0 date date
-
-
-testIds : List String
-testIds =
-    [ "17396058", "18784245", "14952160", "18636969", "14643208", "6595859", "10326163", "13818577", "17835011", "15230382", "19819697", "10116390", "14547084", "7402749", "7837787", "3920719", "10208124", "16004573", "15491054", "19651858", "12904911", "21959304", "15597571", "6097583", "18588", "11687029", "15712186", "21098618", "10326126", "24899644", "19840933", "25209715", "21231432", "8428965", "15491282", "11108767", "20456171", "10958987", "6141436", "10710556", "6807818", "6837392", "25903864", "22083683", "17963700", "19734249", "20897727", "5495849", "16925570", "7340959", "21788032", "21097143", "16756452", "19074415", "4935212", "11961267", "25547673", "5878481", "8269516", "6898344", "14544412" ]
 
 
 
