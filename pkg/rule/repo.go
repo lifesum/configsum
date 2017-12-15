@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 )
 
 // Supported kinds of rules.
@@ -82,6 +83,7 @@ type Rule struct {
 	rollout     uint8
 	startTime   time.Time
 	updatedAt   time.Time
+	RandFunc    generate.RandPercentageFunc
 }
 
 // New returns a valid rule.
@@ -91,6 +93,8 @@ func New(
 	active bool,
 	criteria *Criteria,
 	buckets []Bucket,
+	rollout *uint8,
+	randFunc generate.RandPercentageFunc,
 ) (Rule, error) {
 	r := Rule{
 		active:      active,
@@ -102,6 +106,11 @@ func New(
 		ID:          id,
 		kind:        kind,
 		name:        name,
+		RandFunc:    randFunc,
+	}
+
+	if rollout != nil {
+		r.rollout = *rollout
 	}
 
 	err := r.validate()
@@ -155,8 +164,8 @@ func (r Rule) validate() error {
 }
 
 // Run given an input params and context will try to match based on the rules
-// Criteria and if matched overrides the input params with the its own.
-func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, []int, error) {
+// Criteria and if matched overrides the input params with its own.
+func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt generate.RandPercentageFunc) (Parameters, []int, error) {
 	if r.criteria != nil && r.criteria.User != nil {
 		if r.criteria.User.Age != nil {
 			return nil, nil, errors.New("matching user age not implemented")
@@ -174,7 +183,15 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, [
 		}
 	}
 
-	params := Parameters{}
+	var (
+		params = Parameters{}
+		d      = []int{}
+	)
+
+	diceRollout := randInt()
+	if len(decisions) != 0 {
+		diceRollout = decisions[0]
+	}
 
 	switch r.kind {
 	case KindOverride:
@@ -182,12 +199,22 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int) (Parameters, [
 	case KindExperiment:
 		return Parameters{}, nil, errors.New("experiment based rules not implemented")
 	case KindRollout:
-		return Parameters{}, nil, errors.New("rollout based rules not implemented")
+		if len(decisions) != 0 {
+			d = decisions
+		} else {
+			d = append(d, diceRollout)
+		}
+
+		if diceRollout <= int(r.rollout) {
+			params = r.buckets[0].Parameters
+		} else {
+			return nil, d, errors.Wrap(errors.ErrRuleNotInRollout, "rollout percentage")
+		}
 	}
 
 	for name, value := range params {
 		input[name] = value
 	}
 
-	return input, nil, nil
+	return input, d, nil
 }

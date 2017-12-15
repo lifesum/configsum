@@ -38,6 +38,7 @@ var (
 	ErrNoRuleForID        = errors.New("no rules for this ID")
 	ErrNoRuleWithName     = errors.New("no rule with name")
 	ErrRuleNoMatch        = errors.New("no match")
+	ErrRuleNotInRollout   = errors.New("not in rollout")
 )
 
 // Cause is a wraper over github.com/pkg/errors.Cause.

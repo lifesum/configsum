@@ -142,21 +142,23 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID])
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], r.RandFunc)
 		if err != nil {
 			switch errors.Cause(err) {
 			case errors.ErrRuleNoMatch:
+				continue
+			case errors.ErrRuleNotInRollout:
+				decisions[r.ID] = d
 				continue
 			default:
 				return UserConfig{}, err
 			}
 		}
 
-		decisions[r.ID] = d
 		params = pm
 	}
 
-	if reflect.DeepEqual(params, uc.rendered) {
+	if reflect.DeepEqual(params, uc.rendered) && reflect.DeepEqual(uc.ruleDecisions, decisions) {
 		return uc, nil
 	}
 

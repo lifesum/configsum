@@ -16,6 +16,10 @@ var seed = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 type prepareFunc func(t *testing.T) Repo
 
+func randIntGenerateTest() int {
+	return 61
+}
+
 func TestRule(t *testing.T) {
 	var (
 		userID = generate.RandomString(24)
@@ -51,11 +55,12 @@ func TestRule(t *testing.T) {
 					},
 				},
 			},
-			kind: overrideKind,
+			kind:     overrideKind,
+			RandFunc: randIntGenerateTest,
 		}
 	)
 
-	have, _, err := r.Run(input, ctx, nil)
+	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,6 +71,208 @@ func TestRule(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleDecisions(t *testing.T) {
+	var (
+		userID = generate.RandomString(24)
+		ctx    = Context{
+			User: ContextUser{
+				Age: uint8(rand.Intn(99)),
+				ID:  userID,
+			},
+		}
+		ids = MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		rolloutKind = KindRollout
+		r           = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:     rolloutKind,
+			rollout:  uint8(randIntGenerateTest()),
+			RandFunc: randIntGenerateTest,
+		}
+	)
+
+	_, d, err := r.Run(input, ctx, nil, r.RandFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	have := d[0]
+
+	if want := randIntGenerateTest(); have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleNoDecisions(t *testing.T) {
+	var (
+		userID = generate.RandomString(24)
+		ctx    = Context{
+			User: ContextUser{
+				Age: uint8(rand.Intn(99)),
+				ID:  userID,
+			},
+		}
+		ids = MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		rolloutKind = KindRollout
+		r           = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:     rolloutKind,
+			RandFunc: randIntGenerateTest,
+		}
+	)
+
+	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleRollout(t *testing.T) {
+	var (
+		userID = generate.RandomString(24)
+		ctx    = Context{
+			User: ContextUser{
+				Age: uint8(rand.Intn(99)),
+				ID:  userID,
+			},
+		}
+		ids = MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		rolloutKind = KindRollout
+		r           = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:     rolloutKind,
+			rollout:  uint8(randIntGenerateTest()),
+			RandFunc: randIntGenerateTest,
+		}
+	)
+
+	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := Parameters{
+		"feature_x": true,
+		"feature_y": false,
+	}
+
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleRolloutOutsideBucket(t *testing.T) {
+	var (
+		userID = generate.RandomString(24)
+		ctx    = Context{
+			User: ContextUser{
+				Age: uint8(rand.Intn(99)),
+				ID:  userID,
+			},
+		}
+		ids = MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		rolloutKind = KindRollout
+		r           = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:     rolloutKind,
+			rollout:  37,
+			RandFunc: randIntGenerateTest,
+		}
+	)
+
+	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -312,7 +519,17 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rule, err := New(id.String(), configID, name, "", KindOverride, false, nil, buckets)
+	rule, err := New(
+		id.String(),
+		configID,
+		name, "",
+		KindOverride,
+		false,
+		nil,
+		buckets,
+		nil,
+		randIntGenerateTest,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -701,7 +918,18 @@ func testRepoCreateRollout(t *testing.T, p prepareFunc) {
 		t.Fatal(err)
 	}
 
-	rule, err := New(id.String(), configID, name, "", KindRollout, false, nil, buckets)
+	rule, err := New(
+		id.String(),
+		configID,
+		name,
+		"",
+		KindRollout,
+		false,
+		nil,
+		buckets,
+		nil,
+		randIntGenerateTest,
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
