@@ -182,7 +182,7 @@ func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt genera
 
 	var (
 		params = Parameters{}
-		d      = decisions
+		d      = []int{}
 	)
 
 	diceRollout := randInt()
