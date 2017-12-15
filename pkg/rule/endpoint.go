@@ -163,6 +163,42 @@ func (r ResponseParameters) Swap(i, j int) {
 	r[i], r[j] = r[j], r[i]
 }
 
+type responseCriteria struct {
+	criteria *Criteria
+}
+
+func (r *responseCriteria) MarshalJSON() ([]byte, error) {
+	var u *responseCriteriaUser
+
+	if r.criteria.User != nil {
+		u = &responseCriteriaUser{user: r.criteria.User}
+	}
+
+	return json.Marshal(struct {
+		User *responseCriteriaUser `json:"user,omitempty"`
+	}{
+		User: u,
+	})
+}
+
+type responseCriteriaUser struct {
+	user *CriteriaUser
+}
+
+func (r *responseCriteriaUser) MarshalJSON() ([]byte, error) {
+	var is []string
+
+	if r.user.ID != nil {
+		is = []string(*r.user.ID)
+	}
+
+	return json.Marshal(struct {
+		ID []string `json:"id"`
+	}{
+		ID: is,
+	})
+}
+
 type responseRule struct {
 	rule Rule
 }
@@ -174,29 +210,35 @@ func (r *responseRule) MarshalJSON() ([]byte, error) {
 		bs = append(bs, responseBucket{bucket: b})
 	}
 
+	var c *responseCriteria
+
+	if r.rule.criteria != nil {
+		c = &responseCriteria{criteria: r.rule.criteria}
+	}
+
 	return json.Marshal(struct {
-		Active      bool             `json:"active"`
-		ActivatedAt time.Time        `json:"activated_at"`
-		Buckets     []responseBucket `json:"buckets"`
-		ConfigID    string           `json:"config_id"`
-		CreatedAt   string           `json:"created_at"`
-		Criteria    *Criteria        `json:"criteria,omitempty"`
-		Description string           `json:"description"`
-		Deleted     bool             `json:"deleted"`
-		EndTime     time.Time        `json:"end_time"`
-		ID          string           `json:"id"`
-		Kind        Kind             `json:"kind"`
-		Name        string           `json:"name"`
-		Rollout     uint8            `json:"rollout"`
-		StartTime   time.Time        `json:"start_time"`
-		UpdatedAt   time.Time        `json:"updated_at"`
+		Active      bool              `json:"active"`
+		ActivatedAt time.Time         `json:"activated_at"`
+		Buckets     []responseBucket  `json:"buckets"`
+		ConfigID    string            `json:"config_id"`
+		CreatedAt   string            `json:"created_at"`
+		Criteria    *responseCriteria `json:"criteria,omitempty"`
+		Description string            `json:"description"`
+		Deleted     bool              `json:"deleted"`
+		EndTime     time.Time         `json:"end_time"`
+		ID          string            `json:"id"`
+		Kind        Kind              `json:"kind"`
+		Name        string            `json:"name"`
+		Rollout     uint8             `json:"rollout"`
+		StartTime   time.Time         `json:"start_time"`
+		UpdatedAt   time.Time         `json:"updated_at"`
 	}{
 		Active:      r.rule.active,
 		ActivatedAt: r.rule.activatedAt,
 		Buckets:     bs,
 		ConfigID:    r.rule.configID,
 		CreatedAt:   r.rule.createdAt.Format(time.RFC3339Nano),
-		Criteria:    r.rule.criteria,
+		Criteria:    c,
 		Description: r.rule.description,
 		Deleted:     r.rule.deleted,
 		EndTime:     r.rule.endTime,
