@@ -28,8 +28,41 @@ a:hover {
 	color: rgba(255, 255, 255, 0.6);
 }
 
-a.active, a.action {
+a.active {
 	color: rgb(255, 82, 82);
+}
+
+a.action {
+	background: rgba(255, 255, 255, 0.3);
+    color: rgb(34, 34, 34);
+    display: inline-block;
+    font-size: 1.6rem;
+    font-weight: 900;
+    padding: 2.8rem 1.6rem;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+a.action:hover {
+	color: rgba(255, 255, 255, 1);
+}
+
+a.action.approve {
+	background: rgba(238, 255, 170, 0.7);
+}
+
+a.action.approve:hover {
+	background: rgba(238, 255, 170, 1);
+	color: rgba(34, 34, 34, 1);
+}
+
+a.action.cancel {
+	background: rgba(255, 82, 82, 0.7);
+}
+
+a.action.cancel:hover {
+	background: rgba(255, 82, 82, 1);
+	color: rgba(34, 34, 34, 1);
 }
 
 h1 {

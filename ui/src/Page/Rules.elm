@@ -4,6 +4,7 @@ import Date
 import Html
     exposing
         ( Html
+        , a
         , div
         , h1
         , h2
@@ -67,14 +68,27 @@ initRule now id =
 
 
 type Msg
-    = FormSubmit
+    = ActivationToggled (Result Http.Error String)
+    | FormSubmit
     | SelectRule String
     | ToggleAddRule
+    | ToggleActivation String Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ActivationToggled (Err error) ->
+            ( { model | error = Just error }, Cmd.none )
+
+        ActivationToggled (Ok _) ->
+            case model.rule of
+                Just rule ->
+                    ( { model | rule = Just { rule | active = not rule.active } }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         FormSubmit ->
             ( model, Cmd.none )
 
@@ -83,6 +97,16 @@ update msg model =
 
         ToggleAddRule ->
             ( { model | showAddRule = not model.showAddRule }, Cmd.none )
+
+        ToggleActivation id active ->
+            let
+                call =
+                    if active then
+                        Api.deactivateRule id
+                    else
+                        Api.activateRule id
+            in
+                ( model, call |> Http.send ActivationToggled )
 
 
 
@@ -97,6 +121,22 @@ view model =
 
         Nothing ->
             viewList model
+
+
+viewActivation : Rule -> Html Msg
+viewActivation rule =
+    let
+        ( linkClass, linkText ) =
+            if rule.active then
+                ( "cancel", "deactivate" )
+            else
+                ( "approve", "activate" )
+    in
+        section [ class "activation" ]
+            [ h2 [] [ text "activation" ]
+            , a [ class ("action " ++ linkClass), onClick <| ToggleActivation rule.id rule.active ]
+                [ text linkText ]
+            ]
 
 
 viewAdd : Int -> String -> Msg -> Html Msg
@@ -212,6 +252,7 @@ viewMeta now rule =
             , ( "config", rule.configId )
             , ( "created", (View.Date.short rule.createdAt) )
             , ( "updated", (View.Date.pretty now rule.updatedAt) )
+            , ( "activated", (View.Date.pretty now rule.activatedAt) )
             ]
     in
         section [ class "meta" ] <| List.map viewCard cards
@@ -226,6 +267,7 @@ viewRule error now rule =
             ]
         , View.Error.view error
         , viewMeta now rule
+        , viewActivation rule
         , viewCriteria rule.criteria
         , viewParameters rule.buckets
         ]
