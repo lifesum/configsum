@@ -5,6 +5,7 @@ type Service interface {
 	Activate(id string) error
 	Deactivate(id string) error
 	GetByID(id string) (Rule, error)
+	List() (List, error)
 	UpdateRollout(id string, rollout uint8) error
 }
 
@@ -55,6 +56,10 @@ func (s *service) Deactivate(id string) error {
 
 func (s *service) GetByID(id string) (Rule, error) {
 	return s.repo.GetByID(id)
+}
+
+func (s *service) List() (List, error) {
+	return s.repo.ListAll()
 }
 
 func (s *service) UpdateRollout(id string, rollout uint8) error {

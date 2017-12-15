@@ -258,6 +258,61 @@ func (r *responseRule) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+type responseList struct {
+	rules []Rule
+}
+
+func (r *responseList) MarshalJSON() ([]byte, error) {
+	rs := []responseRule{}
+
+	for _, r := range r.rules {
+		rs = append(rs, responseRule{
+			rule: r,
+		})
+	}
+
+	return json.Marshal(struct {
+		Rules []responseRule `json:"rules"`
+	}{
+		Rules: rs,
+	})
+}
+
+func (r *responseList) UnmarshalJSON(raw []byte) error {
+	v := struct {
+		Rules []responseRule `json:"rules"`
+	}{}
+
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return err
+	}
+
+	for _, rr := range v.Rules {
+		r.rules = append(r.rules, rr.rule)
+	}
+
+	return nil
+}
+
+func (r responseList) StatusCode() int {
+	if len(r.rules) == 0 {
+		return http.StatusNoContent
+	}
+
+	return http.StatusOK
+}
+
+func listEndpoint(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		rs, err := svc.List()
+		if err != nil {
+			return nil, err
+		}
+
+		return &responseList{rules: rs}, nil
+	}
+}
+
 type updateRolloutRequest struct {
 	id      string
 	rollout uint8

@@ -22,6 +22,15 @@ func MakeHandler(svc Service, opts ...kithttp.ServerOption) http.Handler {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
 
+	r.Methods("GET").Path(`/`).Name("ruleList").Handler(
+		kithttp.NewServer(
+			listEndpoint(svc),
+			decodeListRequest,
+			kithttp.EncodeJSONResponse,
+			opts...,
+		),
+	)
+
 	r.Methods("GET").Path(`/{id:[a-zA-Z0-9]+}`).Name("ruleGet").Handler(
 		kithttp.NewServer(
 			getEndpoint(svc),
@@ -98,6 +107,10 @@ func decodeGetRequest(ctx context.Context, r *http.Request) (interface{}, error)
 	}
 
 	return getRequest{id: id}, nil
+}
+
+func decodeListRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	return struct{}{}, nil
 }
 
 func decodeUpdateRolloutRequest(ctx context.Context, r *http.Request) (interface{}, error) {
