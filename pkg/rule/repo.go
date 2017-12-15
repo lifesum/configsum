@@ -43,12 +43,15 @@ type ContextUser struct {
 // results of dice rolls for percenatage based decisions.
 type Decisions map[string][]int
 
+// List is a collection of Rule.
+type List []Rule
+
 // Repo provides access to rules.
 type Repo interface {
 	lifecycle
 
 	Create(input Rule) (Rule, error)
-	GetByName(configID, name string) (Rule, error)
+	GetByID(string) (Rule, error)
 	UpdateWith(input Rule) (Rule, error)
 	ListAll() ([]Rule, error)
 	ListActive(configID string, now time.Time) ([]Rule, error)

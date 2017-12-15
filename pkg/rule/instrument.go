@@ -39,12 +39,12 @@ func (r *instrumentRuleRepo) Create(input Rule) (rl Rule, err error) {
 	return r.next.Create(input)
 }
 
-func (r *instrumentRuleRepo) GetByName(configID, name string) (rl Rule, err error) {
+func (r *instrumentRuleRepo) GetByID(id string) (rl Rule, err error) {
 	defer func(begin time.Time) {
-		r.opObserve(r.store, labelRuleRepo, "GetByName", begin, err)
+		r.opObserve(r.store, labelRuleRepo, "GetByID", begin, err)
 	}(time.Now())
 
-	return r.next.GetByName(configID, name)
+	return r.next.GetByID(id)
 }
 
 func (r *instrumentRuleRepo) UpdateWith(input Rule) (rl Rule, err error) {
@@ -52,7 +52,7 @@ func (r *instrumentRuleRepo) UpdateWith(input Rule) (rl Rule, err error) {
 		r.opObserve(r.store, labelRuleRepo, "UpdateWith", begin, err)
 	}(time.Now())
 
-	return r.UpdateWith(input)
+	return r.next.UpdateWith(input)
 }
 
 func (r *instrumentRuleRepo) ListAll() (rs []Rule, err error) {
@@ -60,7 +60,7 @@ func (r *instrumentRuleRepo) ListAll() (rs []Rule, err error) {
 		r.opObserve(r.store, labelRuleRepo, "ListAll", begin, err)
 	}(time.Now())
 
-	return r.ListAll()
+	return r.next.ListAll()
 }
 
 func (r *instrumentRuleRepo) ListActive(
@@ -79,7 +79,7 @@ func (r *instrumentRuleRepo) setup() (err error) {
 		r.opObserve(r.store, labelRuleRepo, "Setup", begin, err)
 	}(time.Now())
 
-	return r.setup()
+	return r.next.setup()
 }
 
 func (r *instrumentRuleRepo) teardown() (err error) {
@@ -87,5 +87,5 @@ func (r *instrumentRuleRepo) teardown() (err error) {
 		r.opObserve(r.store, labelRuleRepo, "Teardown", begin, err)
 	}(time.Now())
 
-	return r.teardown()
+	return r.next.teardown()
 }

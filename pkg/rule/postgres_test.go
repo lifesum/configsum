@@ -15,8 +15,8 @@ import (
 
 var pgURI string
 
-func TestPostgresRepoGetNotFound(t *testing.T) {
-	testRepoGetNotFound(t, preparePGRepo)
+func TestPostgresRepoGetByIDNotFound(t *testing.T) {
+	testRepoGetByIDNotFound(t, preparePGRepo)
 }
 
 func TestPostgresRepoCreateDuplicate(t *testing.T) {

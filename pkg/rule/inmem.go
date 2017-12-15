@@ -1,7 +1,6 @@
 package rule
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/lifesum/configsum/pkg/errors"
@@ -22,18 +21,16 @@ func NewInmemRuleRepo() Repo {
 	}
 }
 
-func (r *inmemRepo) GetByName(configID, name string) (Rule, error) {
-	rules, ok := r.rules[configID]
-	if !ok {
-		return Rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("config id '%s'", configID))
+func (r *inmemRepo) GetByID(id string) (Rule, error) {
+	for _, cs := range r.rules {
+		for _, rule := range cs {
+			if rule.ID == id {
+				return rule, nil
+			}
+		}
 	}
 
-	rl, ok := rules[name]
-	if !ok {
-		return Rule{}, errors.Wrap(errors.ErrNotFound, fmt.Sprintf("rule name '%s'", name))
-	}
-
-	return rl, nil
+	return Rule{}, errors.Wrapf(errors.ErrNotFound, "rule id '%s'", id)
 }
 
 func (r *inmemRepo) Create(input Rule) (Rule, error) {

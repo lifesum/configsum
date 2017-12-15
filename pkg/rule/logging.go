@@ -71,13 +71,12 @@ func (r *logRuleRepo) Create(input Rule) (rl Rule, err error) {
 	return r.next.Create(input)
 }
 
-func (r *logRuleRepo) GetByName(configID, name string) (rl Rule, err error) {
+func (r *logRuleRepo) GetByID(id string) (rl Rule, err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
-			logConfigID, configID,
-			logName, name,
-			logOp, "GetByName",
+			logID, id,
+			logOp, "GetByID",
 		}
 
 		if err != nil {
@@ -87,7 +86,7 @@ func (r *logRuleRepo) GetByName(configID, name string) (rl Rule, err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.GetByName(configID, name)
+	return r.next.GetByID(id)
 }
 
 func (r *logRuleRepo) UpdateWith(input Rule) (rl Rule, err error) {

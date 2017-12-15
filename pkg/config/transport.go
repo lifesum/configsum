@@ -1,20 +1,18 @@
 package config
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/xeipuuv/gojsonschema"
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/rule"
+	confhttp "github.com/lifesum/configsum/pkg/transport/http"
 )
 
 // Headers.
@@ -55,7 +53,7 @@ func MakeBaseHandler(
 	r.Methods("POST").Path(`/`).Name("configBaseCreate").Handler(
 		kithttp.NewServer(
 			baseCreateEndpoint(svc),
-			decodeJSONSchema(decodeBaseCreateRequest, schemaBaseCreateRequest),
+			confhttp.DecodeJSONSchema(decodeBaseCreateRequest, schemaBaseCreateRequest),
 			kithttp.EncodeJSONResponse,
 			opts...,
 		),
@@ -76,7 +74,7 @@ func MakeBaseHandler(
 	r.Methods("PUT").Path(`/{id:[a-zA-Z0-9]+}`).Name("configBaseUpdate").Handler(
 		kithttp.NewServer(
 			baseUpdateEndpoint(svc),
-			decodeJSONSchema(decodeBaseUpdateRequest, schemaBaseUpdateRequest),
+			confhttp.DecodeJSONSchema(decodeBaseUpdateRequest, schemaBaseUpdateRequest),
 			kithttp.EncodeJSONResponse,
 			append(
 				opts,
@@ -100,7 +98,7 @@ func MakeHandler(
 	r.Methods("PUT").Path(`/{baseConfig:[a-z0-9\-]+}`).Name("configUserRender").Handler(
 		kithttp.NewServer(
 			auth(userRenderEndpoint(svc)),
-			decodeJSONSchema(decodeUserRenderRequest, schemaUserRenderRequest),
+			confhttp.DecodeJSONSchema(decodeUserRenderRequest, schemaUserRenderRequest),
 			encodeUserRenderResponse,
 			append(
 				opts,
@@ -110,40 +108,6 @@ func MakeHandler(
 	)
 
 	return r
-}
-
-func decodeJSONSchema(
-	next kithttp.DecodeRequestFunc,
-	schema *gojsonschema.Schema,
-) kithttp.DecodeRequestFunc {
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
-		raw, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(raw) == 0 {
-			return nil, errors.Wrap(errors.ErrInvalidPayload, "empty body")
-		}
-		res, err := schema.Validate(gojsonschema.NewBytesLoader(raw))
-		if nil != err {
-			return nil, errors.Wrap(errors.ErrInvalidPayload, err.Error())
-		}
-
-		if !res.Valid() {
-			err := errors.ErrInvalidPayload
-
-			for _, e := range res.Errors() {
-				err = errors.Wrap(err, e.String())
-			}
-
-			return nil, err
-		}
-
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(raw))
-
-		return next(ctx, r)
-	}
 }
 
 func extractMuxVars(keys ...muxVar) kithttp.RequestFunc {

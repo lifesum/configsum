@@ -67,7 +67,7 @@ const (
 				:updatedAt
 		)`
 
-	pgRuleGetByName = `
+	pgRuleGetByID = `
 		SELECT
 			id,
 			active,
@@ -87,8 +87,7 @@ const (
 		FROM
 			rule.rules
 		WHERE
-			config_id = :configId
-			AND name = :name
+			id = :id
 			AND deleted = false
 		ORDER BY
 			created_at DESC
@@ -236,10 +235,9 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
-	query, args, err := r.db.BindNamed(pgRuleGetByName, map[string]interface{}{
-		"configId": configID,
-		"name":     name,
+func (r *pgRepo) GetByID(id string) (Rule, error) {
+	query, args, err := r.db.BindNamed(pgRuleGetByID, map[string]interface{}{
+		"id": id,
 	})
 	if err != nil {
 		return Rule{}, fmt.Errorf("named query: %s", err)
@@ -271,7 +269,7 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 				return Rule{}, err
 			}
 
-			return r.GetByName(configID, name)
+			return r.GetByID(id)
 		case sql.ErrNoRows:
 			return Rule{}, errors.Wrap(errors.ErrNotFound, "get rule")
 
@@ -286,10 +284,16 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		return Rule{}, errors.Wrap(err, "unmarshal buckets")
 	}
 
-	criteria := Criteria{}
+	// TODO(xla): If the the value in the column is NULL criteria will be non
+	// nil if we don't have this extra check in place.
+	var criteria *Criteria
 
-	if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
-		return Rule{}, errors.Wrap(err, "unmarshal criteria")
+	if len(raw.Criteria) > 0 && string(raw.Criteria) != "null" {
+		criteria = &Criteria{}
+
+		if err := json.Unmarshal(raw.Criteria, criteria); err != nil {
+			return Rule{}, errors.Wrap(err, "unmarshal criteria")
+		}
 	}
 
 	var activatedAt time.Time
@@ -314,7 +318,7 @@ func (r *pgRepo) GetByName(configID, name string) (Rule, error) {
 		buckets:     buckets,
 		configID:    raw.ConfigID,
 		createdAt:   raw.CreatedAt.UTC(),
-		criteria:    &criteria,
+		criteria:    criteria,
 		description: raw.Description,
 		deleted:     raw.Deleted,
 		endTime:     endTime,
@@ -424,6 +428,8 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 }
 
 func buildList(rows *sqlx.Rows) ([]Rule, error) {
+	defer rows.Close()
+
 	rules := []Rule{}
 
 	for rows.Next() {
