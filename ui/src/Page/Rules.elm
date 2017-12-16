@@ -201,6 +201,28 @@ viewCriteriaItem ( attr, value ) =
         ]
 
 
+viewHeader : Rule -> Html Msg
+viewHeader rule =
+    let
+        ( stateIcon, stateClass ) =
+            case rule.active of
+                True ->
+                    ( "nc-flash-24", "active" )
+
+                False ->
+                    ( "nc-flash-off-26", "inactive" )
+    in
+        div [ class "header" ]
+            [ div [ class ("state " ++ stateClass) ]
+                [ span [ class ("nc-icon " ++ stateIcon) ] []
+                ]
+            , h1 []
+                [ text "Rules/"
+                , strong [] [ text rule.name ]
+                ]
+            ]
+
+
 viewList : Model -> Html Msg
 viewList model =
     div []
@@ -232,16 +254,25 @@ viewListAction showAddRule =
 
 viewListItem : Rule -> Html Msg
 viewListItem rule =
-    tr
-        [ class "action"
-        , Route.href <| Route.Rule rule.id
-        , onClick <| SelectRule rule.id
-        ]
-        [ td [] [ text <| toString rule.active ]
-        , td [] [ text rule.name ]
-        , td [] [ text <| toString rule.kind ]
-        , td [] [ text rule.configId ]
-        ]
+    let
+        ( stateIcon, stateClass ) =
+            case rule.active of
+                True ->
+                    ( "nc-flash-24", "active" )
+
+                False ->
+                    ( "nc-flash-off-26", "inactive" )
+    in
+        tr
+            [ class "action"
+            , Route.href <| Route.Rule rule.id
+            , onClick <| SelectRule rule.id
+            ]
+            [ td [ class "icon" ] [ span [ class ("nc-icon " ++ stateIcon) ] [] ]
+            , td [] [ text rule.name ]
+            , td [] [ text <| toString rule.kind ]
+            , td [] [ text rule.configId ]
+            ]
 
 
 viewMeta : Time -> Rule -> Html Msg
@@ -261,15 +292,12 @@ viewMeta now rule =
 viewRule : Maybe Http.Error -> Time -> Rule -> Html Msg
 viewRule error now rule =
     div []
-        [ h1 []
-            [ text "Rules/"
-            , strong [] [ text rule.name ]
-            ]
+        [ viewHeader rule
         , View.Error.view error
         , viewMeta now rule
-        , viewActivation rule
         , viewCriteria rule.criteria
         , viewParameters rule.buckets
+        , viewActivation rule
         ]
 
 
