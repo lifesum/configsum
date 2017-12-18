@@ -20,20 +20,25 @@ func randIntGenerateTest() int {
 	return 61
 }
 
-func TestRule(t *testing.T) {
+func TestRuleMatch(t *testing.T) {
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
 			User: ContextUser{
-				Age: uint8(rand.Intn(99)),
-				ID:  userID,
+				Age:          uint8(rand.Intn(99)),
+				ID:           userID,
+				Subscription: 2,
 			},
+		}
+		subs = MatcherInt{
+			comparator: comparatorGT,
+			value:      1,
 		}
 		ids = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
-			generate.RandomString(24),
 			userID,
+			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
@@ -41,8 +46,24 @@ func TestRule(t *testing.T) {
 			"feature_x": false,
 			"feature_y": false,
 		}
-		overrideKind = KindOverride
-		r            = Rule{
+		rollout         = KindRollout
+		ruleBoolMatcher = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					Subscription: &subs,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:    rollout,
+			rollout: uint8(randIntGenerateTest()),
+		}
+		ruleStringListMatcher = Rule{
 			criteria: &Criteria{
 				User: &CriteriaUser{
 					ID: &ids,
@@ -55,12 +76,12 @@ func TestRule(t *testing.T) {
 					},
 				},
 			},
-			kind:     overrideKind,
-			RandFunc: randIntGenerateTest,
+			kind:    rollout,
+			rollout: uint8(randIntGenerateTest()),
 		}
 	)
 
-	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	have, _, err := ruleBoolMatcher.Run(input, ctx, nil, randIntGenerateTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +92,91 @@ func TestRule(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	have, _, err = ruleStringListMatcher.Run(input, ctx, nil, randIntGenerateTest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want = Parameters{
+		"feature_x": true,
+		"feature_y": false,
+	}
+
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+}
+
+func TestRuleNoMatch(t *testing.T) {
+	var (
+		userID = generate.RandomString(24)
+		ctx    = Context{
+			User: ContextUser{
+				Age:          uint8(rand.Intn(99)),
+				ID:           userID,
+				Subscription: 0,
+			},
+		}
+		subs = MatcherInt{
+			comparator: comparatorGT,
+			value:      0,
+		}
+		ids = MatcherStringList{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		rollout         = KindRollout
+		ruleBoolMatcher = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					Subscription: &subs,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:    rollout,
+			rollout: uint8(randIntGenerateTest()),
+		}
+		ruleStringListMatcher = Rule{
+			criteria: &Criteria{
+				User: &CriteriaUser{
+					ID: &ids,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:    rollout,
+			rollout: uint8(randIntGenerateTest()),
+		}
+	)
+
+	_, _, err := ruleBoolMatcher.Run(input, ctx, nil, randIntGenerateTest)
+	if have, want := errors.Cause(err), errors.ErrRuleNoMatch; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	_, _, err = ruleStringListMatcher.Run(input, ctx, nil, randIntGenerateTest)
+	if have, want := errors.Cause(err), errors.ErrRuleNoMatch; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }

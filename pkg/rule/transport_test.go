@@ -18,6 +18,10 @@ import (
 	"github.com/lifesum/configsum/pkg/generate"
 )
 
+func randIntGenTest() int {
+	return 61
+}
+
 func TestRuleActivate(t *testing.T) {
 	var (
 		configID = generate.RandomString(12)
@@ -46,6 +50,8 @@ func TestRuleActivate(t *testing.T) {
 				},
 			},
 		},
+		nil,
+		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -108,6 +114,8 @@ func TestRuleDeactivate(t *testing.T) {
 				},
 			},
 		},
+		nil,
+		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -170,6 +178,8 @@ func TestRuleGet(t *testing.T) {
 				},
 			},
 		},
+		nil,
+		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -282,6 +292,8 @@ func TestRuleList(t *testing.T) {
 					},
 				},
 			},
+			nil,
+			randIntGenTest,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -340,6 +352,8 @@ func TestRuleUpdateRollout(t *testing.T) {
 				},
 			},
 		},
+		nil,
+		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
