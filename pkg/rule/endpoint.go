@@ -224,16 +224,25 @@ type responseCriteriaUser struct {
 }
 
 func (r *responseCriteriaUser) MarshalJSON() ([]byte, error) {
-	var is []string
+	var (
+		is           []string
+		subscription *MatcherInt
+	)
 
 	if r.user.ID != nil {
 		is = []string(*r.user.ID)
 	}
 
+	if r.user.Subscription != nil {
+		subscription = r.user.Subscription
+	}
+
 	return json.Marshal(struct {
-		ID []string `json:"id"`
+		ID           []string    `json:"id,omitempty"`
+		Subscription *MatcherInt `json:"subscription,omitempty"`
 	}{
-		ID: is,
+		ID:           is,
+		Subscription: subscription,
 	})
 }
 
@@ -244,7 +253,7 @@ func (r *responseCriteriaUser) UnmarshalJSON(raw []byte) error {
 
 	v := struct {
 		ID           *MatcherStringList `json:"id"`
-		Subscription int                `json:"subscription"`
+		Subscription *MatcherInt        `json:"subscription"`
 	}{}
 
 	if err := json.Unmarshal(raw, &v); err != nil {
@@ -255,6 +264,10 @@ func (r *responseCriteriaUser) UnmarshalJSON(raw []byte) error {
 
 	if v.ID != nil {
 		r.user.ID = v.ID
+	}
+
+	if v.Subscription != nil {
+		r.user.Subscription = v.Subscription
 	}
 
 	return nil

@@ -343,8 +343,21 @@ attrCriteriaUser : Maybe CriteriaUser -> List ( String, String )
 attrCriteriaUser user =
     case user of
         Just user ->
-            [ ( "User.ID", (toString <| List.length user.id) ++ " IDs" )
-            ]
+            let
+                ids =
+                    [ ( "User.ID", (toString <| List.length user.id) ++ " IDs" )
+                    ]
+
+                subscription =
+                    case user.subscription of
+                        Just subscription ->
+                            [ ( "User.Subscription", toString subscription.value )
+                            ]
+
+                        Nothing ->
+                            []
+            in
+                List.append ids subscription
 
         Nothing ->
             []

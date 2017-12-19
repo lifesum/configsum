@@ -178,6 +178,10 @@ func TestRuleGet(t *testing.T) {
 					generate.RandomString(12),
 					generate.RandomString(12),
 				},
+				Subscription: &MatcherInt{
+					Comparator: comparatorGT,
+					Value:      1,
+				},
 			},
 		},
 		[]Bucket{

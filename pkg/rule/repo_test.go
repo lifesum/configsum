@@ -35,8 +35,8 @@ func TestRuleMatch(t *testing.T) {
 			},
 		}
 		subs = MatcherInt{
-			comparator: comparatorGT,
-			value:      1,
+			Comparator: comparatorGT,
+			Value:      1,
 		}
 		locale = MatcherString("en_GB")
 		ids    = MatcherStringList{
@@ -144,8 +144,8 @@ func TestRuleNoMatch(t *testing.T) {
 			},
 		}
 		subs = MatcherInt{
-			comparator: comparatorGT,
-			value:      0,
+			Comparator: comparatorGT,
+			Value:      0,
 		}
 		ids = MatcherStringList{
 			generate.RandomString(24),

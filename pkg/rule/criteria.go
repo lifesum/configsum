@@ -49,8 +49,8 @@ func (m MatcherBool) match(input interface{}) (bool, error) {
 
 // MatcherInt defines methods for matching a rule on int type
 type MatcherInt struct {
-	comparator comparator
-	value      int
+	Comparator comparator
+	Value      int
 }
 
 func (m MatcherInt) match(input interface{}) (bool, error) {
@@ -59,9 +59,9 @@ func (m MatcherInt) match(input interface{}) (bool, error) {
 		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != int", reflect.TypeOf(input).Kind())
 	}
 
-	switch m.comparator {
+	switch m.Comparator {
 	case comparatorGT:
-		return t > m.value, nil
+		return t > m.Value, nil
 	default:
 		return false, nil
 	}

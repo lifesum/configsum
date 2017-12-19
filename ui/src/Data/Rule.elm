@@ -26,6 +26,13 @@ type alias Criteria =
 
 type alias CriteriaUser =
     { id : List String
+    , subscription : Maybe MatcherInt
+    }
+
+
+type alias MatcherInt =
+    { comparator : Int
+    , value : Int
     }
 
 
@@ -83,6 +90,7 @@ decodeCriteriaUser : Decoder CriteriaUser
 decodeCriteriaUser =
     decode CriteriaUser
         |> optional "id" (Decode.list Decode.string) []
+        |> optional "subscription" (Decode.map Just decodeMatcherInt) Nothing
 
 
 decodeKind : Int -> Decoder Kind
@@ -99,6 +107,13 @@ decodeKind raw =
 
         _ ->
             fail "unsupported kind"
+
+
+decodeMatcherInt : Decoder MatcherInt
+decodeMatcherInt =
+    decode MatcherInt
+        |> required "Comparator" Decode.int
+        |> required "Value" Decode.int
 
 
 
