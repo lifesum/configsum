@@ -38,10 +38,8 @@ func TestRuleMatch(t *testing.T) {
 			comparator: comparatorGT,
 			value:      1,
 		}
-		locale = MatcherString{
-			value: "en_GB",
-		}
-		ids = MatcherStringList{
+		locale = MatcherString("en_GB")
+		ids    = MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			userID,
@@ -88,9 +86,7 @@ func TestRuleMatch(t *testing.T) {
 		}
 		ruleStringMatcher = Rule{
 			criteria: &Criteria{
-				Locale: &CriteriaLocale{
-					Locale: &locale,
-				},
+				Locale: &locale,
 			},
 			buckets: []Bucket{
 				Bucket{

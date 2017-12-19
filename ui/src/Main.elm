@@ -229,8 +229,10 @@ view model =
         div []
             [ content
             , footer []
-                [ div [ class "debug" ] [ text (toString model) ]
-                ]
+                []
+
+            --[ div [ class "debug" ] [ text (toString model) ]
+            --]
             ]
 
 

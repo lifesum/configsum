@@ -19,7 +19,8 @@ type alias Bucket =
 
 
 type alias Criteria =
-    { user : Maybe CriteriaUser
+    { locale : Maybe String
+    , user : Maybe CriteriaUser
     }
 
 
@@ -74,6 +75,7 @@ decodeBucket =
 decodeCriteria : Decoder Criteria
 decodeCriteria =
     decode Criteria
+        |> optional "locale" (Decode.map Just Decode.string) Nothing
         |> optional "user" (Decode.map Just decodeCriteriaUser) Nothing
 
 

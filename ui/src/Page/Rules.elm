@@ -171,7 +171,7 @@ viewCriteria criteria =
         attrs =
             case criteria of
                 Just criteria ->
-                    attrCriteriaUser criteria.user
+                    List.append (attrCriteriaLocale criteria.locale) (attrCriteriaUser criteria.user)
 
                 Nothing ->
                     []
@@ -237,7 +237,8 @@ viewList model =
                     , th [ class "config" ] [ text "config" ]
                     ]
                 ]
-              --, tbody [] <| List.append (List.map viewListItem model.rules) <| viewListAction model.showAddRule
+
+            --, tbody [] <| List.append (List.map viewListItem model.rules) <| viewListAction model.showAddRule
             , tbody [] <| List.map viewListItem model.rules
             ]
         ]
@@ -343,6 +344,17 @@ attrCriteriaUser user =
     case user of
         Just user ->
             [ ( "User.ID", (toString <| List.length user.id) ++ " IDs" )
+            ]
+
+        Nothing ->
+            []
+
+
+attrCriteriaLocale : Maybe String -> List ( String, String )
+attrCriteriaLocale locale =
+    case locale of
+        Just locale ->
+            [ ( "Device.Locale", locale )
             ]
 
         Nothing ->

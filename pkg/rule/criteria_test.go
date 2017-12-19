@@ -51,9 +51,7 @@ func TestMatcherString(t *testing.T) {
 		badVal  = generate.RandomString(24)
 	)
 
-	m := MatcherString{
-		value: goodVal,
-	}
+	m := MatcherString(goodVal)
 
 	ok, err := m.match(input)
 	if err != nil {
@@ -64,9 +62,7 @@ func TestMatcherString(t *testing.T) {
 		t.Error("expect input to match")
 	}
 
-	m = MatcherString{
-		value: badVal,
-	}
+	m = MatcherString(badVal)
 
 	ok, err = m.match(input)
 	if err != nil {
