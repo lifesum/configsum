@@ -1,9 +1,10 @@
 package config
 
 import (
-	"github.com/lifesum/configsum/pkg/errors"
-
+	"reflect"
 	"testing"
+
+	"github.com/lifesum/configsum/pkg/errors"
 )
 
 func TestLocationInvalidLocale(t *testing.T) {
@@ -31,5 +32,16 @@ func TestUnmarshalUserContext(t *testing.T) {
 	err := u.UnmarshalJSON(input)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	have := u
+	want := userInfo{
+		Age:          27,
+		Registered:   "2017-12-04T23:11:38Z",
+		Subscription: 2,
+	}
+
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
