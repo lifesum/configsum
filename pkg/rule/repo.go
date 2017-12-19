@@ -3,6 +3,8 @@ package rule
 import (
 	"time"
 
+	"golang.org/x/text/language"
+
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 )
@@ -31,7 +33,8 @@ type Bucket struct {
 
 // Context carries information for rule decisions to match criteria.
 type Context struct {
-	User ContextUser
+	User   ContextUser
+	Locale ContextLocale
 }
 
 // ContextUser bundles user information for rule criteria to match.
@@ -40,6 +43,11 @@ type ContextUser struct {
 	ID           string
 	Registered   string
 	Subscription int
+}
+
+// ContextLocale bundles locale information for rule criteria to match.
+type ContextLocale struct {
+	Locale language.Tag
 }
 
 // Decisions reflects a matrix of rules applied to a config and if present the

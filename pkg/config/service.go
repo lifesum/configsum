@@ -143,6 +143,9 @@ func (s *userService) Render(
 				Registered:   ctx.User.Registered,
 				Subscription: ctx.User.Subscription,
 			},
+			Locale: rule.ContextLocale{
+				Locale: ctx.Device.Location.locale,
+			},
 		}
 
 		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], r.RandFunc)

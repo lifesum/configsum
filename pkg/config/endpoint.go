@@ -171,6 +171,24 @@ type userInfo struct {
 	Subscription int
 }
 
+func (u *userInfo) UnmarshalJSON(raw []byte) error {
+	v := struct {
+		Age          uint8  `json:"age"`
+		Registered   string `json:"registered"`
+		Subscription int    `json:"subscription"`
+	}{}
+
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return err
+	}
+
+	u.Age = v.Age
+	u.Registered = v.Registered
+	u.Subscription = v.Subscription
+
+	return nil
+}
+
 type userRenderContext struct {
 	Device device   `json:"device"`
 	User   userInfo `json:"user"`

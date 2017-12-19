@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
+	"golang.org/x/text/language"
 
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
@@ -29,10 +30,16 @@ func TestRuleMatch(t *testing.T) {
 				ID:           userID,
 				Subscription: 2,
 			},
+			Locale: ContextLocale{
+				Locale: language.Make("en_GB"),
+			},
 		}
 		subs = MatcherInt{
 			comparator: comparatorGT,
 			value:      1,
+		}
+		locale = MatcherString{
+			value: "en_GB",
 		}
 		ids = MatcherStringList{
 			generate.RandomString(24),
@@ -79,6 +86,22 @@ func TestRuleMatch(t *testing.T) {
 			kind:    rollout,
 			rollout: uint8(randIntGenerateTest()),
 		}
+		ruleStringMatcher = Rule{
+			criteria: &Criteria{
+				Locale: &CriteriaLocale{
+					Locale: &locale,
+				},
+			},
+			buckets: []Bucket{
+				Bucket{
+					Parameters: Parameters{
+						"feature_x": true,
+					},
+				},
+			},
+			kind:    rollout,
+			rollout: uint8(randIntGenerateTest()),
+		}
 	)
 
 	have, _, err := ruleBoolMatcher.Run(input, ctx, nil, randIntGenerateTest)
@@ -100,9 +123,13 @@ func TestRuleMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want = Parameters{
-		"feature_x": true,
-		"feature_y": false,
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	have, _, err = ruleStringMatcher.Run(input, ctx, nil, randIntGenerateTest)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	if !reflect.DeepEqual(have, want) {
