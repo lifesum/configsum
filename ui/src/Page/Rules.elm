@@ -237,7 +237,8 @@ viewList model =
                     , th [ class "config" ] [ text "config" ]
                     ]
                 ]
-            , tbody [] <| List.append (List.map viewListItem model.rules) <| viewListAction model.showAddRule
+              --, tbody [] <| List.append (List.map viewListItem model.rules) <| viewListAction model.showAddRule
+            , tbody [] <| List.map viewListItem model.rules
             ]
         ]
 
