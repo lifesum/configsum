@@ -43,3 +43,37 @@ func TestMatcherListString(t *testing.T) {
 		t.Errorf("expect input not to match")
 	}
 }
+
+func TestMatcherString(t *testing.T) {
+	var (
+		input   = generate.RandomString(24)
+		goodVal = input
+		badVal  = generate.RandomString(24)
+	)
+
+	m := MatcherString{
+		value: goodVal,
+	}
+
+	ok, err := m.match(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !ok {
+		t.Error("expect input to match")
+	}
+
+	m = MatcherString{
+		value: badVal,
+	}
+
+	ok, err = m.match(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if ok {
+		t.Error("expect input not to match")
+	}
+}
