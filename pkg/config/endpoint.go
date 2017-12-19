@@ -167,15 +167,15 @@ func (l *location) UnmarshalJSON(raw []byte) error {
 
 type userInfo struct {
 	Age          uint8
-	Registered   string
+	Registered   time.Time
 	Subscription int
 }
 
 func (u *userInfo) UnmarshalJSON(raw []byte) error {
 	v := struct {
-		Age          uint8  `json:"age"`
-		Registered   string `json:"registered"`
-		Subscription int    `json:"subscription"`
+		Age          uint8     `json:"age"`
+		Registered   time.Time `json:"registered"`
+		Subscription int       `json:"subscription"`
 	}{}
 
 	if err := json.Unmarshal(raw, &v); err != nil {

@@ -41,7 +41,7 @@ type Context struct {
 type ContextUser struct {
 	Age          uint8
 	ID           string
-	Registered   string
+	Registered   time.Time
 	Subscription int
 }
 
