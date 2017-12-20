@@ -23,7 +23,7 @@ type comparator int8
 // Criteria defines if a rule will match on the given context data.
 type Criteria struct {
 	User   *CriteriaUser
-	Locale *CriteriaLocale
+	Locale *MatcherString
 }
 
 // CriteriaUser holds all relevant matchers concerning a user.
@@ -31,11 +31,6 @@ type CriteriaUser struct {
 	Age          *MatcherInt
 	ID           *MatcherStringList
 	Subscription *MatcherInt
-}
-
-// CriteriaLocale hold all relevant matchers concerning the locale.
-type CriteriaLocale struct {
-	Locale *MatcherString
 }
 
 // MatcherBool defines methods for matching a rule on bool type
@@ -54,8 +49,8 @@ func (m MatcherBool) match(input interface{}) (bool, error) {
 
 // MatcherInt defines methods for matching a rule on int type
 type MatcherInt struct {
-	comparator comparator
-	value      int
+	Comparator comparator
+	Value      int
 }
 
 func (m MatcherInt) match(input interface{}) (bool, error) {
@@ -64,18 +59,16 @@ func (m MatcherInt) match(input interface{}) (bool, error) {
 		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != int", reflect.TypeOf(input).Kind())
 	}
 
-	switch m.comparator {
+	switch m.Comparator {
 	case comparatorGT:
-		return t > m.value, nil
+		return t > m.Value, nil
 	default:
 		return false, nil
 	}
 }
 
 // MatcherString defines methods for matching a rule on string type
-type MatcherString struct {
-	value string
-}
+type MatcherString string
 
 func (m MatcherString) match(input interface{}) (bool, error) {
 	t, ok := input.(string)
@@ -83,7 +76,7 @@ func (m MatcherString) match(input interface{}) (bool, error) {
 		return false, errors.Wrapf(errors.ErrInvalidTypeToMatch, "missmatch %s != string", reflect.TypeOf(input).Kind())
 	}
 
-	if t == m.value {
+	if t == string(m) {
 		return true, nil
 	}
 

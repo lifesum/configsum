@@ -5,16 +5,16 @@
 	padding: 0;
 }
 
+html {
+	font-size: 62.5%;
+	-webkit-font-smoothing: antialiased;
+}
+
 body {
 	background: rgb(34, 34, 34);
 	color: rgb(255, 255, 255);
 	display: block;
 	height: 100%;
-}
-
-html {
-	font-size: 62.5%;
-	-webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -28,8 +28,41 @@ a:hover {
 	color: rgba(255, 255, 255, 0.6);
 }
 
-a.active, a.action {
+a.active {
 	color: rgb(255, 82, 82);
+}
+
+a.action {
+	background: rgba(255, 255, 255, 0.3);
+    color: rgb(34, 34, 34);
+    display: inline-block;
+    font-size: 1.6rem;
+    font-weight: 900;
+    padding: 1.8rem 1rem;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+a.action:hover {
+	color: rgba(255, 255, 255, 1);
+}
+
+a.action.approve {
+	background: rgba(238, 255, 170, 0.7);
+}
+
+a.action.approve:hover {
+	background: rgba(238, 255, 170, 1);
+	color: rgba(34, 34, 34, 1);
+}
+
+a.action.cancel {
+	background: rgba(255, 82, 82, 0.7);
+}
+
+a.action.cancel:hover {
+	background: rgba(255, 82, 82, 1);
+	color: rgba(34, 34, 34, 1);
 }
 
 h1 {
@@ -201,6 +234,35 @@ main.errored div.error div {
 	padding: 0.8rem;
 }
 
+main.page div.header {
+    align-content: stretch;
+    align-items: stretch;
+    display: flex;
+}
+
+main.page div.header div.active,
+main.page div.header div.inactive {
+	align-items: center;
+	color: rgba(34, 34, 34, 1);
+	display: inline-flex;
+	font-size: 2rem;
+	justify-content: center;
+	width: 5rem;
+}
+
+main.page div.header div.active {
+	background: rgba(238, 255, 170, 0.7);
+}
+
+main.page div.header div.inactive {
+	background: rgba(255, 82, 82, 0.7);
+}
+
+main.page div.header h1 {
+	flex-grow: 2;
+	margin: 0;
+}
+
 main section {
 	margin-top: 5rem;
 }
@@ -244,6 +306,11 @@ table thead tr th {
 	padding: 1rem 0 0.5em 0.8rem;
 	text-align: left;
 	text-transform: capitalize;
+}
+
+table thead tr th.icon {
+	text-align: center;
+	width: 7rem;
 }
 
 table thead tr th.id {
@@ -357,6 +424,11 @@ table tbody tr.form:hover select {
 
 table tbody tr.form:hover select option {
 	color: rgba(34, 34, 34, 1);
+}
+
+table tbody tr td.icon {
+	font-size: 2rem;
+	text-align: center;
 }
 
 table tbody tr td.type {

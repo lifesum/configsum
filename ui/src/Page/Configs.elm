@@ -7,7 +7,6 @@ import Html
         ( Html
         , div
         , h1
-        , h2
         , input
         , label
         , option
@@ -29,12 +28,11 @@ import Html.Attributes
         , class
         , classList
         , colspan
-        , disabled
-        , for
         , id
+        , for
         , placeholder
-        , type_
         , value
+        , type_
         )
 import Html.Events exposing (on, onCheck, onClick, onInput, targetValue)
 import Http
@@ -45,10 +43,13 @@ import Time exposing (Time)
 import Api.Client
 import Api.Config as Api
 import Data.Client exposing (Client)
-import Data.Config exposing (Config, Parameter(..))
+import Data.Config exposing (Config)
+import Data.Parameter exposing (Parameter(..))
 import Page.Errored exposing (PageLoadError, pageLoadError)
 import Route
+import View.Date
 import View.Error
+import View.Parameter
 
 
 -- MODEL
@@ -143,7 +144,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
         name =
-            paramName model.newParameter
+            View.Parameter.name model.newParameter
     in
         case (Debug.log "CONFIG MSG" msg) of
             ConfigLoaded (Err error) ->
@@ -291,11 +292,11 @@ viewConfig now config showAdd parameter error =
         div []
             [ h1 []
                 [ text "Configs/Base/"
-                , span [ class "highlight" ] [ text config.name ]
+                , strong [ class "highlight" ] [ text config.name ]
                 ]
             , View.Error.view error
             , viewMeta config now
-            , viewParameters config.parameters action
+            , View.Parameter.viewTable action config.parameters
             ]
 
 
@@ -361,8 +362,8 @@ viewMeta config now =
         cards =
             [ ( "id", config.id )
             , ( "client", config.clientId )
-            , ( "created", (shortDate config.createdAt) )
-            , ( "updated", (prettyDate now config.updatedAt) )
+            , ( "created", (View.Date.short config.createdAt) )
+            , ( "updated", (View.Date.pretty now config.updatedAt) )
             ]
     in
         section [ class "meta" ] (List.map viewCard cards)
@@ -373,64 +374,6 @@ viewOption name val =
     option [ value val ] [ text name ]
 
 
-viewParameter : Parameter -> Html Msg
-viewParameter parameter =
-    tr []
-        [ td [] [ text (paramName parameter) ]
-        , td
-            [ classList [ ( "type", True ), ( (paramTypeClass parameter), True ) ]
-            ]
-            [ text (paramTypeClass parameter)
-            ]
-        , td [ class ("value " ++ (paramTypeClass parameter)) ] [ viewParameterValue parameter ]
-        ]
-
-
-viewParameterValue : Parameter -> Html Msg
-viewParameterValue parameter =
-    case parameter of
-        BoolParameter name value ->
-            div []
-                [ input
-                    [ checked value
-                    , disabled True
-                    , id ("param-bool-" ++ name)
-                    , type_ "checkbox"
-                    ]
-                    []
-                , label [ for ("param-bool-" ++ name) ] []
-                ]
-
-        NumberParameter _ value ->
-            span [] [ text (toString value) ]
-
-        NumbersParameter _ values ->
-            div [] (List.map (\v -> span [] [ text (toString v) ]) values)
-
-        StringParameter _ value ->
-            span [] [ text value ]
-
-        StringsParameter _ values ->
-            div [] (List.map (\v -> span [] [ text v ]) values)
-
-
-viewParameters : List Parameter -> List (Html Msg) -> Html Msg
-viewParameters parameters action =
-    section [ class "parameters" ]
-        [ h2 [] [ text "parameters" ]
-        , table []
-            [ thead []
-                [ tr []
-                    [ th [ class "name" ] [ text "name" ]
-                    , th [ class "type" ] [ text "type" ]
-                    , th [] [ text "value" ]
-                    ]
-                ]
-            , tbody [] (List.append (List.map viewParameter parameters) action)
-            ]
-        ]
-
-
 viewParameterForm : Config -> Parameter -> List (Html Msg)
 viewParameterForm config parameter =
     let
@@ -438,8 +381,9 @@ viewParameterForm config parameter =
             [ "bool"
             , "number"
             , "string"
-              -- "numbers"
-              -- "strings"
+
+            -- "numbers"
+            -- "strings"
             ]
     in
         [ tr [ class "form" ]
@@ -448,7 +392,7 @@ viewParameterForm config parameter =
                     [ onInput UpdateParameterName
                     , placeholder "Name"
                     , type_ "text"
-                    , value (paramName parameter)
+                    , value (View.Parameter.name parameter)
                     ]
                     []
                 ]
@@ -519,44 +463,6 @@ viewParameterFormValue parameter =
 -- HELPER
 
 
-paramName : Parameter -> String
-paramName parameter =
-    case parameter of
-        BoolParameter name _ ->
-            name
-
-        NumberParameter name _ ->
-            name
-
-        NumbersParameter name _ ->
-            name
-
-        StringParameter name _ ->
-            name
-
-        StringsParameter name _ ->
-            name
-
-
-paramTypeClass : Parameter -> String
-paramTypeClass parameter =
-    case parameter of
-        BoolParameter _ _ ->
-            "bool"
-
-        NumberParameter _ _ ->
-            "number"
-
-        NumbersParameter _ _ ->
-            "numbers"
-
-        StringParameter _ _ ->
-            "string"
-
-        StringsParameter _ _ ->
-            "strings"
-
-
 paramUpdateName : String -> Parameter -> Parameter
 paramUpdateName name parameter =
     case parameter of
@@ -598,94 +504,6 @@ paramValue parameter =
 
         StringsParameter _ vals ->
             String.join " " vals
-
-
-prettyDate : Time -> Date -> String
-prettyDate now date =
-    let
-        day =
-            24 * Time.hour
-
-        diff =
-            (now - (Date.toTime date))
-
-        diffDays =
-            Basics.floor (diff / day)
-    in
-        if diff < Time.minute then
-            "just now"
-        else if diff < (2 * Time.minute) then
-            "1 minute ago"
-        else if diff < Time.hour then
-            (toString (Basics.floor (diff / Time.minute))) ++ " minutes ago"
-        else if diff < (2 * Time.hour) then
-            "1 hour ago"
-        else if diff < day then
-            (toString (Basics.floor (diff / Time.hour))) ++ " hours ago"
-        else if diffDays == 1 then
-            "yesterday"
-        else if diffDays < 7 then
-            (toString diffDays) ++ " days ago"
-        else
-            (toString (Basics.ceiling ((toFloat diffDays) / 7))) ++ " weeks ago"
-
-
-shortDate : Date -> String
-shortDate date =
-    let
-        month =
-            case Date.month date of
-                Date.Jan ->
-                    "01"
-
-                Date.Feb ->
-                    "02"
-
-                Date.Mar ->
-                    "03"
-
-                Date.Apr ->
-                    "04"
-
-                Date.May ->
-                    "05"
-
-                Date.Jun ->
-                    "06"
-
-                Date.Jul ->
-                    "07"
-
-                Date.Aug ->
-                    "08"
-
-                Date.Sep ->
-                    "09"
-
-                Date.Oct ->
-                    "10"
-
-                Date.Nov ->
-                    "11"
-
-                Date.Dec ->
-                    "12"
-
-        dateStr =
-            String.join "-"
-                [ (toString (Date.year date))
-                , month
-                , (toString (Date.day date))
-                ]
-
-        timeStr =
-            String.join ":"
-                [ (toString (Date.hour date))
-                , (toString (Date.minute date))
-                , (toString (Date.second date))
-                ]
-    in
-        dateStr ++ " " ++ timeStr
 
 
 toInt : String -> Int

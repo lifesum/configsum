@@ -24,6 +24,11 @@ pageLoadError page err =
 unpackError : Http.Error -> Html msg
 unpackError err =
     case err of
+        Http.BadUrl err ->
+            div [ class "error" ]
+                [ h2 [] [ text err ]
+                ]
+
         Http.BadPayload debug res ->
             div [ class "error" ]
                 [ h2 [] [ text debug ]

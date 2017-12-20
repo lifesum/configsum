@@ -168,17 +168,55 @@ type responseCriteria struct {
 }
 
 func (r *responseCriteria) MarshalJSON() ([]byte, error) {
-	var u *responseCriteriaUser
+	var (
+		locale string
+		u      *responseCriteriaUser
+	)
+
+	if r.criteria.Locale != nil {
+		locale = string(*r.criteria.Locale)
+	}
 
 	if r.criteria.User != nil {
 		u = &responseCriteriaUser{user: r.criteria.User}
 	}
 
 	return json.Marshal(struct {
-		User *responseCriteriaUser `json:"user,omitempty"`
+		Locale string                `json:"locale,omitempty"`
+		User   *responseCriteriaUser `json:"user,omitempty"`
 	}{
-		User: u,
+		Locale: locale,
+		User:   u,
 	})
+}
+
+func (r *responseCriteria) UnmarshalJSON(raw []byte) error {
+	if string(raw) == "" || string(raw) == "{}" {
+		return nil
+	}
+
+	v := struct {
+		Locale string                `json:"locale,omitempty"`
+		User   *responseCriteriaUser `json:"user,omitempty"`
+	}{}
+
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return err
+	}
+
+	r.criteria = &Criteria{}
+
+	if v.Locale != "" {
+		locale := MatcherString(v.Locale)
+
+		r.criteria.Locale = &locale
+	}
+
+	if v.User != nil && v.User.user != nil {
+		r.criteria.User = v.User.user
+	}
+
+	return nil
 }
 
 type responseCriteriaUser struct {
@@ -186,17 +224,53 @@ type responseCriteriaUser struct {
 }
 
 func (r *responseCriteriaUser) MarshalJSON() ([]byte, error) {
-	var is []string
+	var (
+		is           []string
+		subscription *MatcherInt
+	)
 
 	if r.user.ID != nil {
 		is = []string(*r.user.ID)
 	}
 
+	if r.user.Subscription != nil {
+		subscription = r.user.Subscription
+	}
+
 	return json.Marshal(struct {
-		ID []string `json:"id"`
+		ID           []string    `json:"id,omitempty"`
+		Subscription *MatcherInt `json:"subscription,omitempty"`
 	}{
-		ID: is,
+		ID:           is,
+		Subscription: subscription,
 	})
+}
+
+func (r *responseCriteriaUser) UnmarshalJSON(raw []byte) error {
+	if string(raw) == "" || string(raw) == "{}" {
+		return nil
+	}
+
+	v := struct {
+		ID           *MatcherStringList `json:"id"`
+		Subscription *MatcherInt        `json:"subscription"`
+	}{}
+
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return err
+	}
+
+	r.user = &CriteriaUser{}
+
+	if v.ID != nil {
+		r.user.ID = v.ID
+	}
+
+	if v.Subscription != nil {
+		r.user.Subscription = v.Subscription
+	}
+
+	return nil
 }
 
 type responseRule struct {
@@ -253,21 +327,21 @@ func (r *responseRule) MarshalJSON() ([]byte, error) {
 
 func (r *responseRule) UnmarshalJSON(raw []byte) error {
 	v := struct {
-		Active      bool             `json:"active"`
-		ActivatedAt time.Time        `json:"activated_at"`
-		Buckets     []responseBucket `json:"buckets"`
-		ConfigID    string           `json:"config_id"`
-		CreatedAt   string           `json:"created_at"`
-		Criteria    *Criteria        `json:"criteria,omitempty"`
-		Description string           `json:"description"`
-		Deleted     bool             `json:"deleted"`
-		EndTime     time.Time        `json:"end_time"`
-		ID          string           `json:"id"`
-		Kind        Kind             `json:"kind"`
-		Name        string           `json:"name"`
-		Rollout     uint8            `json:"rollout"`
-		StartTime   time.Time        `json:"start_time"`
-		UpdatedAt   time.Time        `json:"updated_at"`
+		Active      bool              `json:"active"`
+		ActivatedAt time.Time         `json:"activated_at"`
+		Buckets     []responseBucket  `json:"buckets"`
+		ConfigID    string            `json:"config_id"`
+		CreatedAt   string            `json:"created_at"`
+		Criteria    *responseCriteria `json:"criteria,omitempty"`
+		Description string            `json:"description"`
+		Deleted     bool              `json:"deleted"`
+		EndTime     time.Time         `json:"end_time"`
+		ID          string            `json:"id"`
+		Kind        Kind              `json:"kind"`
+		Name        string            `json:"name"`
+		Rollout     uint8             `json:"rollout"`
+		StartTime   time.Time         `json:"start_time"`
+		UpdatedAt   time.Time         `json:"updated_at"`
 	}{}
 
 	if err := json.Unmarshal(raw, &v); err != nil {
@@ -285,7 +359,7 @@ func (r *responseRule) UnmarshalJSON(raw []byte) error {
 		activatedAt: v.ActivatedAt,
 		buckets:     bs,
 		configID:    v.ConfigID,
-		criteria:    v.Criteria,
+		criteria:    v.Criteria.criteria,
 		description: v.Description,
 		deleted:     v.Deleted,
 		endTime:     v.EndTime,

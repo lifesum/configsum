@@ -5,6 +5,7 @@ import Route exposing (Route)
 import Page.Clients as Clients
 import Page.Configs as Configs
 import Page.Errored exposing (PageLoadError)
+import Page.Rules as Rules
 
 
 type Msg
@@ -14,5 +15,8 @@ type Msg
     | ConfigsMsg Configs.Msg
     | ConfigBaseLoaded (Result PageLoadError Configs.Model)
     | LoadPage (Maybe Route)
+    | RulesLoaded (Result PageLoadError Rules.Model)
+    | RulesMsg Rules.Msg
+    | RuleLoaded (Result PageLoadError Rules.Model)
     | SetRoute Route
     | Tick Time

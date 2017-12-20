@@ -160,6 +160,7 @@ func TestRuleGet(t *testing.T) {
 		req      = httptest.NewRequest("GET", target, nil)
 		rec      = httptest.NewRecorder()
 		r        = MakeHandler(svc)
+		locale   = MatcherString("en_GB")
 	)
 
 	rule, err := New(
@@ -169,7 +170,20 @@ func TestRuleGet(t *testing.T) {
 		"Overrides funky feature for all staff memebers",
 		KindOverride,
 		true,
-		nil,
+		&Criteria{
+			Locale: &locale,
+			User: &CriteriaUser{
+				ID: &MatcherStringList{
+					generate.RandomString(12),
+					generate.RandomString(12),
+					generate.RandomString(12),
+				},
+				Subscription: &MatcherInt{
+					Comparator: comparatorGT,
+					Value:      1,
+				},
+			},
+		},
 		[]Bucket{
 			{
 				Name: "default",
@@ -215,7 +229,11 @@ func TestRuleGet(t *testing.T) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := resp.rule.criteria, created.criteria; !reflect.DeepEqual(have, want) {
+	if have, want := resp.rule.criteria.Locale, created.criteria.Locale; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := resp.rule.criteria.User, created.criteria.User; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 

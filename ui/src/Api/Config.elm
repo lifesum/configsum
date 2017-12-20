@@ -2,7 +2,8 @@ module Api.Config exposing (addParameter, createBase, getBase, listBase)
 
 import Http
 import Json.Decode as Decode
-import Data.Config exposing (Config, Parameter, decoder, encoder, paramsEncoder)
+import Data.Config exposing (Config, decoder, encoder)
+import Data.Parameter exposing (Parameter(..), paramsEncoder)
 
 
 addParameter : String -> List Parameter -> Http.Request Config

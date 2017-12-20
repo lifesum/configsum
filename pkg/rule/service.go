@@ -1,5 +1,7 @@
 package rule
 
+import "time"
+
 // Service for Rule interactions.
 type Service interface {
 	Activate(id string) error
@@ -31,6 +33,7 @@ func (s *service) Activate(id string) error {
 	}
 
 	r.active = true
+	r.activatedAt = time.Now()
 
 	_, err = s.repo.UpdateWith(r)
 
