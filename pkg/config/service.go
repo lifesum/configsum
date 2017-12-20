@@ -9,6 +9,7 @@ import (
 
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/rule"
 )
 
@@ -133,6 +134,7 @@ func (s *userService) Render(
 	var (
 		decisions = rule.Decisions{}
 		params    = rule.Parameters(bc.Parameters)
+		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 	)
 
 	for _, r := range rs {
@@ -148,7 +150,7 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], r.RandFunc)
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandPercentage(seed))
 		if err != nil {
 			switch errors.Cause(err) {
 			case errors.ErrRuleNoMatch:

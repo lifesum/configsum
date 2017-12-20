@@ -177,6 +177,31 @@ func (r Rule) validate() error {
 // Criteria and if matched overrides the input params with its own.
 func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt generate.RandPercentageFunc) (Parameters, []int, error) {
 	if r.criteria != nil && r.criteria.User != nil {
+		if r.criteria.Locale != nil {
+			t, err := language.Parse(string(*r.criteria.Locale))
+			if err != nil {
+				return nil, nil, err
+			}
+
+			region, _ := t.Region()
+
+			expectedTLD, err := region.Canonicalize().TLD()
+			if err != nil {
+				return nil, nil, err
+			}
+
+			region, _ = ctx.Locale.Locale.Region()
+
+			providedTLD, err := region.Canonicalize().TLD()
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if !expectedTLD.Contains(providedTLD) {
+				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "locale")
+			}
+		}
+
 		if r.criteria.User.Age != nil {
 			return nil, nil, errors.New("matching user age not implemented")
 		}
