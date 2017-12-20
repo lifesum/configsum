@@ -6,11 +6,15 @@ import (
 	"time"
 
 	"github.com/oklog/ulid"
+	"golang.org/x/text/language"
 
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/errors"
+	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/rule"
 )
+
+var regionUS = language.MustParseRegion("US")
 
 // BaseService provides base configs.
 type BaseService interface {
@@ -133,6 +137,7 @@ func (s *userService) Render(
 	var (
 		decisions = rule.Decisions{}
 		params    = rule.Parameters(bc.Parameters)
+		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 	)
 
 	for _, r := range rs {
@@ -148,7 +153,7 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], r.RandFunc)
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandPercentage(seed))
 		if err != nil {
 			switch errors.Cause(err) {
 			case errors.ErrRuleNoMatch:
@@ -162,6 +167,14 @@ func (s *userService) Render(
 		}
 
 		params = pm
+	}
+
+	// TODO(xla): This is temporary, remove as soon as rules integrate
+	// properly.
+	userRegion, _ := ctx.Device.Location.locale.Region()
+
+	if ctx.User.Subscription == 1 && regionUS.Contains(userRegion) {
+		params["feature_say-cheese_toggled"] = true
 	}
 
 	if reflect.DeepEqual(params, uc.rendered) && reflect.DeepEqual(uc.ruleDecisions, decisions) {
