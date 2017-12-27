@@ -2,7 +2,6 @@ package client
 
 import (
 	"math/rand"
-	"reflect"
 	"testing"
 	"time"
 
@@ -12,10 +11,12 @@ import (
 )
 
 func TestServiceCreate(t *testing.T) {
+	t.Parallel()
+
 	var (
 		name      = generate.RandomString(12)
-		repo      = prepareInmemRepo(t)
-		tokenRepo = prepareInmemTokenRepo(t)
+		repo      = preparePGRepo(t)
+		tokenRepo = preparePGTokenRepo(t)
 		svc       = NewService(repo, tokenRepo)
 	)
 
@@ -29,7 +30,15 @@ func TestServiceCreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := clientSVC, clientRepo; !reflect.DeepEqual(have, want) {
+	if have, want := clientSVC.deleted, clientRepo.deleted; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := clientSVC.id, clientRepo.id; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := clientSVC.name, clientRepo.name; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
@@ -48,10 +57,12 @@ func TestServiceCreate(t *testing.T) {
 }
 
 func TestListWithToken(t *testing.T) {
+	t.Parallel()
+
 	var (
 		numClients = rand.New(rand.NewSource(time.Now().UnixNano())).Intn(24)
-		repo       = prepareInmemRepo(t)
-		tokenRepo  = prepareInmemTokenRepo(t)
+		repo       = preparePGRepo(t)
+		tokenRepo  = preparePGTokenRepo(t)
 		svc        = NewService(repo, tokenRepo)
 	)
 
@@ -70,9 +81,11 @@ func TestListWithToken(t *testing.T) {
 }
 
 func TestServiceLookupBySecret(t *testing.T) {
+	t.Parallel()
+
 	var (
-		repo      = prepareInmemRepo(t)
-		tokenRepo = prepareInmemTokenRepo(t)
+		repo      = preparePGRepo(t)
+		tokenRepo = preparePGTokenRepo(t)
 		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 		svc       = NewService(repo, tokenRepo)
 	)

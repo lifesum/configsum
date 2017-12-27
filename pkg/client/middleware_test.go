@@ -10,8 +10,8 @@ import (
 
 func TestAuthMiddleware(t *testing.T) {
 	var (
-		repo      = prepareInmemRepo(t)
-		tokenRepo = prepareInmemTokenRepo(t)
+		repo      = preparePGRepo(t)
+		tokenRepo = preparePGTokenRepo(t)
 		svc       = NewService(repo, tokenRepo)
 
 		clientID   = generate.RandomString(24)

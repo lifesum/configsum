@@ -51,7 +51,7 @@ func preparePGRepo(t *testing.T) Repo {
 
 	r := NewPostgresRepo(db)
 
-	if err := r.teardown(); err != nil {
+	if err := r.Teardown(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,7 +66,7 @@ func preparePGTokenRepo(t *testing.T) TokenRepo {
 
 	r := NewPostgresTokenRepo(db)
 
-	if err := r.teardown(); err != nil {
+	if err := r.Teardown(); err != nil {
 		t.Fatal(err)
 	}
 

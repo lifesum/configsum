@@ -93,11 +93,11 @@ func (r *logRepo) Store(id, name string) (client Client, err error) {
 	return r.next.Store(id, name)
 }
 
-func (r *logRepo) setup() (err error) {
+func (r *logRepo) Setup() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logFieldDuration, time.Since(begin).Nanoseconds(),
-			logFieldOp, "setup",
+			logFieldOp, "Setup",
 		}
 
 		if err != nil {
@@ -107,14 +107,14 @@ func (r *logRepo) setup() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *logRepo) teardown() (err error) {
+func (r *logRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logFieldDuration, time.Since(begin).Nanoseconds(),
-			logFieldOp, "teardown",
+			logFieldOp, "Teardown",
 		}
 
 		if err != nil {
@@ -124,7 +124,7 @@ func (r *logRepo) teardown() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }
 
 type logTokenRepo struct {
@@ -201,11 +201,11 @@ func (r *logTokenRepo) Store(clientID, secret string) (token Token, err error) {
 	return r.next.Store(clientID, secret)
 }
 
-func (r *logTokenRepo) setup() (err error) {
+func (r *logTokenRepo) Setup() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logFieldDuration, time.Since(begin).Nanoseconds(),
-			logFieldOp, "setup",
+			logFieldOp, "Setup",
 		}
 
 		if err != nil {
@@ -215,14 +215,14 @@ func (r *logTokenRepo) setup() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *logTokenRepo) teardown() (err error) {
+func (r *logTokenRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logFieldDuration, time.Since(begin).Nanoseconds(),
-			logFieldOp, "teardown",
+			logFieldOp, "Teardown",
 		}
 
 		if err != nil {
@@ -232,5 +232,5 @@ func (r *logTokenRepo) teardown() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }

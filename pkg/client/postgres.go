@@ -101,25 +101,27 @@ const (
 			)`
 )
 
-type pgRepo struct {
+// PGRepo is Postgres backed Repo implementation.
+type PGRepo struct {
 	db *sqlx.DB
 }
 
 // NewPostgresRepo returns a Postgres backed Repo implementation.
-func NewPostgresRepo(db *sqlx.DB) Repo {
-	return &pgRepo{
+func NewPostgresRepo(db *sqlx.DB) *PGRepo {
+	return &PGRepo{
 		db: db,
 	}
 }
 
-func (r *pgRepo) List() (List, error) {
+// List returns all clients.
+func (r *PGRepo) List() (List, error) {
 	rows, err := r.db.NamedQuery(pgClientList, map[string]interface{}{
 		"deleted": false,
 	})
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return nil, err
 			}
 
@@ -154,7 +156,8 @@ func (r *pgRepo) List() (List, error) {
 	return cs, nil
 }
 
-func (r *pgRepo) Lookup(id string) (Client, error) {
+// Lookup returns the client stored for the given id.
+func (r *PGRepo) Lookup(id string) (Client, error) {
 	query, args, err := r.db.BindNamed(pgClientLookup, map[string]interface{}{
 		"deleted": false,
 		"id":      id,
@@ -174,7 +177,7 @@ func (r *pgRepo) Lookup(id string) (Client, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Client{}, err
 			}
 
@@ -190,11 +193,12 @@ func (r *pgRepo) Lookup(id string) (Client, error) {
 		deleted:   raw.Deleted,
 		id:        raw.ID,
 		name:      raw.Name,
-		createdAt: raw.CreatedAt,
+		createdAt: raw.CreatedAt.UTC(),
 	}, nil
 }
 
-func (r *pgRepo) Store(id, name string) (Client, error) {
+// Store persists a new client with the given id and name.
+func (r *PGRepo) Store(id, name string) (Client, error) {
 	_, err := r.db.NamedExec(pgClientStore, map[string]interface{}{
 		"deleted": false,
 		"id":      id,
@@ -205,7 +209,7 @@ func (r *pgRepo) Store(id, name string) (Client, error) {
 		case pg.ErrDuplicateKey:
 			return Client{}, errors.Wrap(errors.ErrExists, "client")
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Client{}, err
 			}
 
@@ -218,11 +222,12 @@ func (r *pgRepo) Store(id, name string) (Client, error) {
 	return Client{
 		id:        id,
 		name:      name,
-		createdAt: time.Now(),
+		createdAt: time.Now().UTC(),
 	}, nil
 }
 
-func (r *pgRepo) setup() error {
+// Setup prepares the PGRepo for operation.
+func (r *PGRepo) Setup() error {
 	for _, q := range []string{
 		pgCreateSchema,
 		pgClientCreateTable,
@@ -236,7 +241,8 @@ func (r *pgRepo) setup() error {
 	return nil
 }
 
-func (r *pgRepo) teardown() error {
+// Teardown deconstructs all dependencies of the repo.
+func (r *PGRepo) Teardown() error {
 	for _, q := range []string{
 		pgClientDropTable,
 	} {
@@ -249,18 +255,20 @@ func (r *pgRepo) teardown() error {
 	return nil
 }
 
-type pgTokenRepo struct {
+// PGTokenRepo is a Postgres backed TokenRepo implementation.
+type PGTokenRepo struct {
 	db *sqlx.DB
 }
 
 // NewPostgresTokenRepo returns a Postgres backed TokenRepo implementation.
-func NewPostgresTokenRepo(db *sqlx.DB) TokenRepo {
-	return &pgTokenRepo{
+func NewPostgresTokenRepo(db *sqlx.DB) *PGTokenRepo {
+	return &PGTokenRepo{
 		db: db,
 	}
 }
 
-func (r *pgTokenRepo) GetLatest(clientID string) (Token, error) {
+// GetLatest returns the newest token for the given client id.
+func (r *PGTokenRepo) GetLatest(clientID string) (Token, error) {
 	query, args, err := r.db.BindNamed(pgTokenGetLatest, map[string]interface{}{
 		"id":      clientID,
 		"deleted": false,
@@ -280,7 +288,7 @@ func (r *pgTokenRepo) GetLatest(clientID string) (Token, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Token{}, err
 			}
 
@@ -300,7 +308,8 @@ func (r *pgTokenRepo) GetLatest(clientID string) (Token, error) {
 	}, nil
 }
 
-func (r *pgTokenRepo) Lookup(secret string) (Token, error) {
+// Lookup given a secret returns the associated token.
+func (r *PGTokenRepo) Lookup(secret string) (Token, error) {
 	query, args, err := r.db.BindNamed(pgTokenLookup, map[string]interface{}{
 		"deleted": false,
 		"secret":  secret,
@@ -320,7 +329,7 @@ func (r *pgTokenRepo) Lookup(secret string) (Token, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Token{}, err
 			}
 
@@ -340,7 +349,8 @@ func (r *pgTokenRepo) Lookup(secret string) (Token, error) {
 	}, nil
 }
 
-func (r *pgTokenRepo) Store(clientID, secret string) (Token, error) {
+// Store persists a new token with the given client id and secret.
+func (r *PGTokenRepo) Store(clientID, secret string) (Token, error) {
 	_, err := r.db.NamedExec(pgTokenStore, map[string]interface{}{
 		"clientId": clientID,
 		"secret":   secret,
@@ -348,7 +358,7 @@ func (r *pgTokenRepo) Store(clientID, secret string) (Token, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Token{}, err
 			}
 
@@ -366,7 +376,8 @@ func (r *pgTokenRepo) Store(clientID, secret string) (Token, error) {
 	}, nil
 }
 
-func (r *pgTokenRepo) setup() error {
+// Setup prepares all dependencies for the Postgres repo.
+func (r *PGTokenRepo) Setup() error {
 	for _, q := range []string{
 		pgCreateSchema,
 		pgTokenCreateTable,
@@ -380,7 +391,8 @@ func (r *pgTokenRepo) setup() error {
 	return nil
 }
 
-func (r *pgTokenRepo) teardown() error {
+// Teardown removes all dependencies of the Postgres repo.
+func (r *PGTokenRepo) Teardown() error {
 	for _, q := range []string{
 		pgTokenDropTable,
 	} {
