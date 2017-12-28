@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/rule"
@@ -53,7 +55,7 @@ func TestUserServiceRender(t *testing.T) {
 		userID   = generate.RandomString(24)
 		userRepo = preparePGUserRepo(t)
 		ruleID   = generate.RandomString(24)
-		ruleRepo = rule.NewInmemRuleRepo()
+		ruleRepo = prepareRuleRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 		matchIDs = rule.MatcherStringList{
 			generate.RandomString(24),
@@ -152,7 +154,7 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		rpTwo     = uint8(49) // rule in rollout
 		ruleOneID = generate.RandomString(24)
 		ruleTwoID = generate.RandomString(24)
-		ruleRepo  = rule.NewInmemRuleRepo()
+		ruleRepo  = prepareRuleRepo(t)
 		svc       = NewUserService(baseRepo, userRepo, ruleRepo)
 		matchIDs  = rule.MatcherStringList{
 			generate.RandomString(24),
@@ -275,7 +277,7 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 			generate.RandomString(24),
 		}
 		ruleID   = generate.RandomString(24)
-		ruleRepo = rule.NewInmemRuleRepo()
+		ruleRepo = prepareRuleRepo(t)
 		userID   = generate.RandomString(24)
 		userRepo = preparePGUserRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
@@ -331,7 +333,7 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 		baseRepo = preparePGBaseRepo(t)
 		userID   = generate.RandomString(24)
 		userRepo = preparePGUserRepo(t)
-		ruleRepo = rule.NewInmemRuleRepo()
+		ruleRepo = prepareRuleRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
 
@@ -370,4 +372,15 @@ func TestValidateParamDelta(t *testing.T) {
 			t.Errorf("have %v, want %v", have, want)
 		}
 	}
+}
+
+func prepareRuleRepo(t *testing.T) rule.Repo {
+	db, err := sqlx.Connect("postgres", pgURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := rule.NewPostgresRepo(db)
+
+	return r
 }
