@@ -57,7 +57,8 @@ func runConsole(args []string, logger log.Logger) error {
 		return err
 	}
 
-	baseRepo := config.NewPostgresBaseRepo(db)
+	var baseRepo config.BaseRepo
+	baseRepo = config.NewPostgresBaseRepo(db)
 	baseRepo = config.NewBaseRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
 		storeRepo,

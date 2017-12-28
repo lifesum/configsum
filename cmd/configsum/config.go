@@ -69,14 +69,16 @@ func runConfig(args []string, logger log.Logger) error {
 		return err
 	}
 
-	baseRepo := config.NewPostgresBaseRepo(db)
+	var baseRepo config.BaseRepo
+	baseRepo = config.NewPostgresBaseRepo(db)
 	baseRepo = config.NewBaseRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
 		storeRepo,
 	)(baseRepo)
 	baseRepo = config.NewBaseRepoLogMiddleware(logger, storeRepo)(baseRepo)
 
-	userRepo := config.NewPostgresUserRepo(db)
+	var userRepo config.UserRepo
+	userRepo = config.NewPostgresUserRepo(db)
 	userRepo = config.NewUserRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
