@@ -83,14 +83,16 @@ func runConfig(args []string, logger log.Logger) error {
 	)(userRepo)
 	userRepo = config.NewUserRepoLogMiddleware(logger, storeRepo)(userRepo)
 
-	clientRepo := client.NewPostgresRepo(db)
+	var clientRepo client.Repo
+	clientRepo = client.NewPostgresRepo(db)
 	clientRepo = client.NewRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,
 	)(clientRepo)
 	clientRepo = client.NewRepoLogMiddleware(logger, storeRepo)(clientRepo)
 
-	tokenRepo := client.NewPostgresTokenRepo(db)
+	var tokenRepo client.TokenRepo
+	tokenRepo = client.NewPostgresTokenRepo(db)
 	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConfig),
 		storeRepo,

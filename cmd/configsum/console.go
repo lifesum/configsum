@@ -64,7 +64,8 @@ func runConsole(args []string, logger log.Logger) error {
 	)(baseRepo)
 	baseRepo = config.NewBaseRepoLogMiddleware(logger, storeRepo)(baseRepo)
 
-	clientRepo := client.NewPostgresRepo(db)
+	var clientRepo client.Repo
+	clientRepo = client.NewPostgresRepo(db)
 	clientRepo = client.NewRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
 		storeRepo,
@@ -78,7 +79,8 @@ func runConsole(args []string, logger log.Logger) error {
 	)(ruleRepo)
 	ruleRepo = rule.NewRuleRepoLogMiddleware(logger, storeRepo)(ruleRepo)
 
-	tokenRepo := client.NewPostgresTokenRepo(db)
+	var tokenRepo client.TokenRepo
+	tokenRepo = client.NewPostgresTokenRepo(db)
 	tokenRepo = client.NewTokenRepoInstrumentMiddleware(
 		instrument.ObserveRepo(instrumentNamespace, taskConsole),
 		storeRepo,
