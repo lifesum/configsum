@@ -72,8 +72,8 @@ type Repo interface {
 type RepoMiddleware func(Repo) Repo
 
 type lifecycle interface {
-	setup() error
-	teardown() error
+	Setup() error
+	Teardown() error
 }
 
 // Rule facilitates the overide of base configs with consumer provided parameters.

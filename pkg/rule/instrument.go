@@ -74,18 +74,18 @@ func (r *instrumentRuleRepo) ListActive(
 	return r.next.ListActive(configID, now)
 }
 
-func (r *instrumentRuleRepo) setup() (err error) {
+func (r *instrumentRuleRepo) Setup() (err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelRuleRepo, "Setup", begin, err)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *instrumentRuleRepo) teardown() (err error) {
+func (r *instrumentRuleRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
 		r.opObserve(r.store, labelRuleRepo, "Teardown", begin, err)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }

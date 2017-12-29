@@ -16,42 +16,62 @@ import (
 var pgURI string
 
 func TestPostgresRepoGetByIDNotFound(t *testing.T) {
+	t.Parallel()
+
 	testRepoGetByIDNotFound(t, preparePGRepo)
 }
 
 func TestPostgresRepoCreateDuplicate(t *testing.T) {
+	t.Parallel()
+
 	testRepoCreateDuplicate(t, preparePGRepo)
 }
 
 func TestPostgresRepoGet(t *testing.T) {
+	t.Parallel()
+
 	testRepoGet(t, preparePGRepo)
 }
 
 func TestPostgresRepoUpdateWith(t *testing.T) {
+	t.Parallel()
+
 	testRepoUpdateWith(t, preparePGRepo)
 }
 
 func TestPostgresRepoListAll(t *testing.T) {
+	t.Parallel()
+
 	testRepoListAll(t, preparePGRepo)
 }
 
 func TestPostgresRepoListAllEmpty(t *testing.T) {
+	t.Parallel()
+
 	testRepoListAllEmpty(t, preparePGRepo)
 }
 
 func TestPostgresRepoListDeleted(t *testing.T) {
+	t.Parallel()
+
 	testRepoListDeleted(t, preparePGRepo)
 }
 
 func TestPostgresRepoListActive(t *testing.T) {
+	t.Parallel()
+
 	testRepoListActive(t, preparePGRepo)
 }
 
 func TestPostgresRepoListActiveEmpty(t *testing.T) {
+	t.Parallel()
+
 	testRepoListActiveEmpty(t, preparePGRepo)
 }
 
 func TestPostgresRepoCreateRollout(t *testing.T) {
+	t.Parallel()
+
 	testRepoCreateRollout(t, preparePGRepo)
 }
 
@@ -61,9 +81,9 @@ func preparePGRepo(t *testing.T) Repo {
 		t.Fatal(err)
 	}
 
-	r := NewPostgresRepo(db)
+	r := NewPostgresRepo(db, PGRepoSchema(t.Name()))
 
-	if err := r.teardown(); err != nil {
+	if err := r.Teardown(); err != nil {
 		t.Fatal(err)
 	}
 

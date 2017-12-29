@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/lifesum/configsum/pkg/errors"
 	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/rule"
@@ -14,52 +16,50 @@ func randIntGenerateTest() int {
 }
 
 func TestBaseServiceUpdate(t *testing.T) {
+	t.Parallel()
+
 	var (
-		clientID = generate.RandomString(12)
-		baseID   = generate.RandomString(16)
-		baseName = generate.RandomString(6)
-		baseRepo = NewInmemBaseRepo(InmemBaseState{
-			clientID: map[string]BaseConfig{
-				baseName: BaseConfig{
-					ClientID:   clientID,
-					ID:         baseID,
-					Name:       baseName,
-					Parameters: nil,
-				},
-			},
-		})
-		svc = NewBaseService(baseRepo, nil)
+		clientID   = generate.RandomString(12)
+		baseID     = generate.RandomString(16)
+		baseName   = generate.RandomString(6)
+		baseParams = rule.Parameters{
+			generate.RandomString(6): true,
+		}
+		baseRepo = preparePGBaseRepo(t)
+		svc      = NewBaseService(baseRepo, nil)
 	)
 
-	_, err := svc.Update(baseID, rule.Parameters{})
+	_, err := baseRepo.Create(baseID, clientID, baseName, nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	updated, err := svc.Update(baseID, baseParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := updated.Parameters, baseParams; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
 
 func TestUserServiceRender(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
 		baseName   = generate.RandomString(24)
 		featureKey = generate.RandomString(24)
-		baseRender = rule.Parameters{
+		baseParams = rule.Parameters{
 			featureKey: false,
 		}
-		baseRepo = NewInmemBaseRepo(InmemBaseState{
-			clientID: map[string]BaseConfig{
-				baseName: BaseConfig{
-					ClientID:   clientID,
-					ID:         baseID,
-					Name:       baseName,
-					Parameters: baseRender,
-				},
-			},
-		})
+		baseRepo = preparePGBaseRepo(t)
 		userID   = generate.RandomString(24)
-		userRepo = NewInmemUserRepo()
+		userRepo = preparePGUserRepo(t)
 		ruleID   = generate.RandomString(24)
-		ruleRepo = rule.NewInmemRuleRepo()
+		ruleRepo = prepareRuleRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 		matchIDs = rule.MatcherStringList{
 			generate.RandomString(24),
@@ -70,6 +70,11 @@ func TestUserServiceRender(t *testing.T) {
 			generate.RandomString(24),
 		}
 	)
+
+	_, err := baseRepo.Create(baseID, clientID, baseName, baseParams)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r, err := rule.New(
 		ruleID,
@@ -121,8 +126,8 @@ func TestUserServiceRender(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := uc, c; !reflect.DeepEqual(have, want) {
-		t.Errorf("have %#v,want %#v", have, want)
+	if have, want := uc.rendered, c.rendered; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 
 	rc, err := svc.Render(clientID, baseName, userID, userRenderContext{})
@@ -130,7 +135,7 @@ func TestUserServiceRender(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := uc, rc; !reflect.DeepEqual(have, want) {
+	if have, want := uc.rendered, rc.rendered; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
@@ -142,43 +147,35 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
 		baseName   = generate.RandomString(24)
-		featureKey = generate.RandomString(24)
-		baseRender = rule.Parameters{
-			featureKey: false,
+		baseParams = rule.Parameters{
+			"feature_one": false,
+			"feature_two": false,
 		}
-		baseRepo = NewInmemBaseRepo(InmemBaseState{
-			clientID: map[string]BaseConfig{
-				baseName: BaseConfig{
-					ClientID:   clientID,
-					ID:         baseID,
-					Name:       baseName,
-					Parameters: baseRender,
-				},
-			},
-		})
-		userID    = generate.RandomString(24)
-		userRepo  = NewInmemUserRepo()
-		rpOne     = uint8(73) // rule not in rollout
-		rpTwo     = uint8(49) // rule in rollout
-		ruleOneID = generate.RandomString(24)
-		ruleTwoID = generate.RandomString(24)
-		ruleRepo  = rule.NewInmemRuleRepo()
-		svc       = NewUserService(baseRepo, userRepo, ruleRepo)
-		matchIDs  = rule.MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-			userID,
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
+		baseRepo     = preparePGBaseRepo(t)
+		userID       = generate.RandomString(24)
+		userRepo     = preparePGUserRepo(t)
+		rpOne        = uint8(73) // rule not in rollout
+		rpTwo        = uint8(49) // rule in rollout
+		ruleOneID    = generate.RandomString(24)
+		ruleTwoID    = generate.RandomString(24)
+		ruleRepo     = prepareRuleRepo(t)
+		svc          = NewUserService(baseRepo, userRepo, ruleRepo)
 		ruleOneParam = rule.Parameters{
-			featureKey: true,
+			"feature_one": true,
 		}
 		ruleTwoParam = rule.Parameters{
-			featureKey: false,
+			"feature_two": true,
+		}
+		expected = rule.Parameters{
+			"feature_one": false,
+			"feature_two": true,
 		}
 	)
+
+	_, err := baseRepo.Create(baseID, clientID, baseName, baseParams)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ruleOne, err := rule.New(
 		ruleOneID,
@@ -187,11 +184,7 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
-			},
-		},
+		nil,
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -213,11 +206,7 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
-			},
-		},
+		nil,
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -242,6 +231,10 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if have, want := uc1.rendered, baseParams; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
 	_, err = ruleRepo.Create(ruleTwo)
 	if err != nil {
 		t.Fatal(err)
@@ -252,48 +245,42 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := uc2.ruleDecisions[ruleOneID], uc1.ruleDecisions[ruleOneID]; !reflect.DeepEqual(have, want) {
+	if have, want := uc2.ruleDecisions[ruleTwoID], uc1.ruleDecisions[ruleTwoID]; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := uc1.rendered, ruleOneParam; !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
-	}
-
-	if have, want := uc2.rendered, ruleTwoParam; reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
+	if have, want := uc2.rendered, expected; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestUserServiceRenderFailingRule(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
 		baseName   = generate.RandomString(24)
-		baseRender = rule.Parameters{
+		baseParams = rule.Parameters{
 			generate.RandomString(24): false,
 		}
-		baseRepo = NewInmemBaseRepo(InmemBaseState{
-			clientID: map[string]BaseConfig{
-				baseName: BaseConfig{
-					ClientID:   clientID,
-					ID:         baseID,
-					Name:       baseName,
-					Parameters: baseRender,
-				},
-			},
-		})
+		baseRepo = preparePGBaseRepo(t)
 		matchIDs = rule.MatcherStringList{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
 		ruleID   = generate.RandomString(24)
-		ruleRepo = rule.NewInmemRuleRepo()
+		ruleRepo = prepareRuleRepo(t)
 		userID   = generate.RandomString(24)
-		userRepo = NewInmemUserRepo()
+		userRepo = preparePGUserRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
+
+	_, err := baseRepo.Create(baseID, clientID, baseName, baseParams)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	r, err := rule.New(
 		ruleID,
@@ -334,13 +321,15 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 }
 
 func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID = generate.RandomString(24)
 		baseName = generate.RandomString(24)
-		baseRepo = NewInmemBaseRepo(nil)
+		baseRepo = preparePGBaseRepo(t)
 		userID   = generate.RandomString(24)
-		userRepo = NewInmemUserRepo()
-		ruleRepo = rule.NewInmemRuleRepo()
+		userRepo = preparePGUserRepo(t)
+		ruleRepo = prepareRuleRepo(t)
 		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
 	)
 
@@ -351,6 +340,8 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 }
 
 func TestValidateParamDelta(t *testing.T) {
+	t.Parallel()
+
 	var (
 		key   = generate.RandomString(6)
 		cases = []struct {
@@ -379,4 +370,15 @@ func TestValidateParamDelta(t *testing.T) {
 			t.Errorf("have %v, want %v", have, want)
 		}
 	}
+}
+
+func prepareRuleRepo(t *testing.T) rule.Repo {
+	db, err := sqlx.Connect("postgres", pgURI)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := rule.NewPostgresRepo(db, rule.PGRepoSchema(t.Name()))
+
+	return r
 }

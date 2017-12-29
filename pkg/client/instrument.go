@@ -56,20 +56,20 @@ func (r *instrumentRepo) Store(id, name string) (client Client, err error) {
 	return r.next.Store(id, name)
 }
 
-func (r *instrumentRepo) setup() (err error) {
+func (r *instrumentRepo) Setup() (err error) {
 	defer func(begin time.Time) {
-		r.opObserve(r.store, labelRepo, "setup", begin, err)
+		r.opObserve(r.store, labelRepo, "Setup", begin, err)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *instrumentRepo) teardown() (err error) {
+func (r *instrumentRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
-		r.opObserve(r.store, labelRepo, "teardown", begin, err)
+		r.opObserve(r.store, labelRepo, "Teardown", begin, err)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }
 
 type instrumentTokenRepo struct {
@@ -117,18 +117,18 @@ func (r *instrumentTokenRepo) Store(clientID, secret string) (token Token, err e
 	return r.next.Store(clientID, secret)
 }
 
-func (r *instrumentTokenRepo) setup() (err error) {
+func (r *instrumentTokenRepo) Setup() (err error) {
 	defer func(begin time.Time) {
-		r.opObserve(r.store, labelRepoToken, "setup", begin, err)
+		r.opObserve(r.store, labelRepoToken, "Setup", begin, err)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *instrumentTokenRepo) teardown() (err error) {
+func (r *instrumentTokenRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
-		r.opObserve(r.store, labelRepoToken, "teardown", begin, err)
+		r.opObserve(r.store, labelRepoToken, "Teardown", begin, err)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }

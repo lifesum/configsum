@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	pgCreateSchema = `CREATE SCHEMA IF NOT EXISTS config`
+	pgDefaultSchema = "config"
+
+	pgCreateSchema = `CREATE SCHEMA IF NOT EXISTS %s`
 
 	pgBaseCreateTable = `
-		CREATE TABLE IF NOT EXISTS config.bases(
+		CREATE TABLE IF NOT EXISTS %s.bases(
 			client_id TEXT NOT NULL,
 			deleted BOOL DEFAULT FALSE,
 			id TEXT NOT NULL PRIMARY KEY,
@@ -27,18 +29,18 @@ const (
 			updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc')
 		)`
 	pgBaseDropTable = `
-		DROP TABLE IF EXISTS config.bases CASCADE`
+		DROP TABLE IF EXISTS %s.bases CASCADE`
 	pgBaseCreate = `
 		/* pgBaseCreate */
 		INSERT INTO
-			config.bases(client_id, id, name, parameters)
+			%s.bases(client_id, id, name, parameters)
 			VALUES(:clientId, :id, :name, :parameters)`
 	pgBaseGetByID = `
 		/* pgBaseGetByID */
 		SELECT
 			client_id, deleted, id, name, parameters, created_at, updated_at
 		FROM
-			config.bases
+			%s.bases
 		WHERE
 			id = :id
 		ORDER BY
@@ -50,7 +52,7 @@ const (
 		SELECT
 			client_id, deleted, id, name, parameters, created_at, updated_at
 		FROM
-			config.bases
+			%s.bases
 		WHERE
 			client_id = :clientId
 			AND name = :name
@@ -63,7 +65,7 @@ const (
 		SELECT
 			client_id, deleted, id, name, parameters, created_at, updated_at
 		FROM
-			config.bases
+			%s.bases
 		WHERE
 			deleted = :deleted
 		ORDER BY
@@ -71,7 +73,7 @@ const (
 	pgBaseUpdate = `
 		/* pgBaseList */
 		UPDATE
-			config.bases
+			%s.bases
 		SET
 			deleted = :deleted,
 			name = :name,
@@ -81,7 +83,7 @@ const (
 			id = :id`
 
 	pgUserCreateTable = `
-		CREATE TABLE IF NOT EXISTS config.users(
+		CREATE TABLE IF NOT EXISTS %s.users(
 			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			base_id TEXT NOT NULL,
@@ -89,12 +91,12 @@ const (
 			rule_decisions JSONB NOT NULL,
 			created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() AT TIME ZONE 'utc')
 		)`
-	pgUserDropTable = `DROP TABLE IF EXISTS config.users CASCADE`
+	pgUserDropTable = `DROP TABLE IF EXISTS %s.users CASCADE`
 
 	pgUserInsert = `
 		/* pgUserInsert*/
 		INSERT INTO
-			config.users(base_id, id, rendered, rule_decisions, user_id) VALUES(
+			%s.users(base_id, id, rendered, rule_decisions, user_id) VALUES(
 			:baseId,
 			:id,
 			:rendered,
@@ -105,7 +107,7 @@ const (
 		SELECT
 			id, user_id, base_id, rendered, rule_decisions, created_at
 		FROM
-			config.users
+			%s.users
 		WHERE
 			base_id = :baseId
 			AND user_id = :userId
@@ -118,19 +120,39 @@ const (
 		CREATE INDEX
 			users_get_latest
 		ON
-			config.users(base_id, user_id, created_at DESC)`
+			%s.users(base_id, user_id, created_at DESC)`
 )
 
-type pgBaseRepo struct {
-	db *sqlx.DB
+// PGBaseRepoOption sets an optional parameter for the base repo.
+type PGBaseRepoOption func(*PGBaseRepo)
+
+// PGBaseRepoSchema sets the namespacing of the Postgres tables toa non-default
+// schema.
+func PGBaseRepoSchema(schema string) PGBaseRepoOption {
+	return func(r *PGBaseRepo) { r.schema = schema }
+}
+
+// PGBaseRepo is a Postgres backed BaseRepo implementation.
+type PGBaseRepo struct {
+	db     *sqlx.DB
+	schema string
 }
 
 // NewPostgresBaseRepo returns a Postgres backed BaseRepo implementation.
-func NewPostgresBaseRepo(db *sqlx.DB) BaseRepo {
-	return &pgBaseRepo{db: db}
+func NewPostgresBaseRepo(db *sqlx.DB, options ...PGBaseRepoOption) *PGBaseRepo {
+	r := &PGBaseRepo{
+		db:     db,
+		schema: pgDefaultSchema,
+	}
+
+	for _, option := range options {
+		option(r)
+	}
+
+	return r
 }
 
-func (r *pgBaseRepo) Create(
+func (r *PGBaseRepo) Create(
 	id, clientID, name string,
 	parameters rule.Parameters,
 ) (BaseConfig, error) {
@@ -139,7 +161,7 @@ func (r *pgBaseRepo) Create(
 		return BaseConfig{}, errors.Wrap(err, "marshal parameters")
 	}
 
-	_, err = r.db.NamedExec(pgBaseCreate, map[string]interface{}{
+	_, err = r.db.NamedExec(r.prefixSchema(pgBaseCreate), map[string]interface{}{
 		"clientId":   clientID,
 		"id":         id,
 		"name":       name,
@@ -169,10 +191,13 @@ func (r *pgBaseRepo) Create(
 	}, nil
 }
 
-func (r *pgBaseRepo) GetByID(id string) (BaseConfig, error) {
-	query, args, err := r.db.BindNamed(pgBaseGetByID, map[string]interface{}{
-		"id": id,
-	})
+func (r *PGBaseRepo) GetByID(id string) (BaseConfig, error) {
+	query, args, err := r.db.BindNamed(
+		r.prefixSchema(pgBaseGetByID),
+		map[string]interface{}{
+			"id": id,
+		},
+	)
 	if err != nil {
 		return BaseConfig{}, errors.Wrap(err, "named query")
 	}
@@ -221,11 +246,14 @@ func (r *pgBaseRepo) GetByID(id string) (BaseConfig, error) {
 	}, nil
 }
 
-func (r *pgBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
-	query, args, err := r.db.BindNamed(pgBaseGetByName, map[string]interface{}{
-		"clientId": clientID,
-		"name":     name,
-	})
+func (r *PGBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
+	query, args, err := r.db.BindNamed(
+		r.prefixSchema(pgBaseGetByName),
+		map[string]interface{}{
+			"clientId": clientID,
+			"name":     name,
+		},
+	)
 	if err != nil {
 		return BaseConfig{}, errors.Wrap(err, "named query")
 	}
@@ -273,10 +301,13 @@ func (r *pgBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
 	}, nil
 }
 
-func (r *pgBaseRepo) List() (BaseList, error) {
-	rows, err := r.db.NamedQuery(pgBaseList, map[string]interface{}{
-		"deleted": false,
-	})
+func (r *PGBaseRepo) List() (BaseList, error) {
+	rows, err := r.db.NamedQuery(
+		r.prefixSchema(pgBaseList),
+		map[string]interface{}{
+			"deleted": false,
+		},
+	)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
@@ -326,7 +357,7 @@ func (r *pgBaseRepo) List() (BaseList, error) {
 	return cs, nil
 }
 
-func (r *pgBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
+func (r *PGBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 	rawParameters, err := json.Marshal(c.Parameters)
 	if err != nil {
 		return BaseConfig{}, errors.Wrap(err, "marshal parameters")
@@ -334,13 +365,16 @@ func (r *pgBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 
 	updatedAt := time.Now().UTC()
 
-	res, err := r.db.NamedExec(pgBaseUpdate, map[string]interface{}{
-		"id":         c.ID,
-		"deleted":    c.Deleted,
-		"name":       c.Name,
-		"parameters": rawParameters,
-		"updatedAt":  updatedAt,
-	})
+	res, err := r.db.NamedExec(
+		r.prefixSchema(pgBaseUpdate),
+		map[string]interface{}{
+			"id":         c.ID,
+			"deleted":    c.Deleted,
+			"name":       c.Name,
+			"parameters": rawParameters,
+			"updatedAt":  updatedAt,
+		},
+	)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
@@ -374,10 +408,10 @@ func (r *pgBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 	}, nil
 }
 
-func (r *pgBaseRepo) setup() error {
+func (r *PGBaseRepo) setup() error {
 	for _, q := range []string{
-		pgCreateSchema,
-		pgBaseCreateTable,
+		r.prefixSchema(pgCreateSchema),
+		r.prefixSchema(pgBaseCreateTable),
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
@@ -388,9 +422,9 @@ func (r *pgBaseRepo) setup() error {
 	return nil
 }
 
-func (r *pgBaseRepo) teardown() error {
+func (r *PGBaseRepo) teardown() error {
 	for _, q := range []string{
-		pgBaseDropTable,
+		r.prefixSchema(pgBaseDropTable),
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
@@ -401,16 +435,39 @@ func (r *pgBaseRepo) teardown() error {
 	return nil
 }
 
-type pgUserRepo struct {
-	db *sqlx.DB
+func (r *PGBaseRepo) prefixSchema(query string) string {
+	return fmt.Sprintf(query, r.schema)
+}
+
+// PGUserRepoOption sets an optional parameter for the user repo.
+type PGUserRepoOption func(*PGUserRepo)
+
+// PGuserRepoSchema sets the namespacing of the Postgres tables toa non-default
+// schema.
+func PGUserRepoSchema(schema string) PGUserRepoOption {
+	return func(r *PGUserRepo) { r.schema = schema }
+}
+
+type PGUserRepo struct {
+	db     *sqlx.DB
+	schema string
 }
 
 // NewPostgresUserRepo returns a Postgres backed UserRepo implementation.
-func NewPostgresUserRepo(db *sqlx.DB) UserRepo {
-	return &pgUserRepo{db: db}
+func NewPostgresUserRepo(db *sqlx.DB, options ...PGUserRepoOption) UserRepo {
+	r := &PGUserRepo{
+		db:     db,
+		schema: pgDefaultSchema,
+	}
+
+	for _, option := range options {
+		option(r)
+	}
+
+	return r
 }
 
-func (r *pgUserRepo) Append(
+func (r *PGUserRepo) Append(
 	id, baseID, userID string,
 	decisions rule.Decisions,
 	render rule.Parameters,
@@ -425,13 +482,16 @@ func (r *pgUserRepo) Append(
 		return UserConfig{}, errors.Wrap(err, "marshal decisions")
 	}
 
-	_, err = r.db.NamedExec(pgUserInsert, map[string]interface{}{
-		"baseId":        baseID,
-		"id":            id,
-		"rendered":      rawRendered,
-		"ruleDecisions": rawDecisions,
-		"userId":        userID,
-	})
+	_, err = r.db.NamedExec(
+		r.prefixSchema(pgUserInsert),
+		map[string]interface{}{
+			"baseId":        baseID,
+			"id":            id,
+			"rendered":      rawRendered,
+			"ruleDecisions": rawDecisions,
+			"userId":        userID,
+		},
+	)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrDuplicateKey:
@@ -456,11 +516,14 @@ func (r *pgUserRepo) Append(
 	}, nil
 }
 
-func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
-	query, args, err := r.db.BindNamed(pgUserGetLatest, map[string]interface{}{
-		"baseId": baseID,
-		"userId": userID,
-	})
+func (r *PGUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
+	query, args, err := r.db.BindNamed(
+		r.prefixSchema(pgUserGetLatest),
+		map[string]interface{}{
+			"baseId": baseID,
+			"userId": userID,
+		},
+	)
 	if err != nil {
 		return UserConfig{}, fmt.Errorf("named query: %s", err)
 	}
@@ -513,11 +576,11 @@ func (r *pgUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 	}, nil
 }
 
-func (r *pgUserRepo) setup() error {
+func (r *PGUserRepo) setup() error {
 	for _, q := range []string{
-		pgCreateSchema,
-		pgUserCreateTable,
-		pgUserIndexGetLatest,
+		r.prefixSchema(pgCreateSchema),
+		r.prefixSchema(pgUserCreateTable),
+		r.prefixSchema(pgUserIndexGetLatest),
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
@@ -528,9 +591,9 @@ func (r *pgUserRepo) setup() error {
 	return nil
 }
 
-func (r *pgUserRepo) teardown() error {
+func (r *PGUserRepo) teardown() error {
 	for _, q := range []string{
-		pgUserDropTable,
+		r.prefixSchema(pgUserDropTable),
 	} {
 		_, err := r.db.Exec(q)
 		if err != nil {
@@ -539,4 +602,8 @@ func (r *pgUserRepo) teardown() error {
 	}
 
 	return nil
+}
+
+func (r *PGUserRepo) prefixSchema(query string) string {
+	return fmt.Sprintf(query, r.schema)
 }

@@ -47,6 +47,6 @@ type Token struct {
 }
 
 type lifecycle interface {
-	setup() error
-	teardown() error
+	Setup() error
+	Teardown() error
 }
