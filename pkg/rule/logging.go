@@ -144,7 +144,7 @@ func (r *logRuleRepo) ListActive(configID string, now time.Time) (rls []Rule, er
 	return r.next.ListActive(configID, now)
 }
 
-func (r *logRuleRepo) setup() (err error) {
+func (r *logRuleRepo) Setup() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
@@ -158,10 +158,10 @@ func (r *logRuleRepo) setup() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.setup()
+	return r.next.Setup()
 }
 
-func (r *logRuleRepo) teardown() (err error) {
+func (r *logRuleRepo) Teardown() (err error) {
 	defer func(begin time.Time) {
 		ps := []interface{}{
 			logDuration, time.Since(begin).Nanoseconds(),
@@ -175,5 +175,5 @@ func (r *logRuleRepo) teardown() (err error) {
 		_ = r.logger.Log(ps...)
 	}(time.Now())
 
-	return r.next.teardown()
+	return r.next.Teardown()
 }

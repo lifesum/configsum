@@ -14,9 +14,11 @@ import (
 )
 
 const (
-	pgRuleCreateSchema = `CREATE SCHEMA IF NOT EXISTS rule`
+	pgDefaultSchmea = "rule"
+
+	pgRuleCreateSchema = `CREATE SCHEMA IF NOT EXISTS %s`
 	pgRuleCreateTable  = `
-		CREATE TABLE IF NOT EXISTS rule.rules(
+		CREATE TABLE IF NOT EXISTS %s.rules(
 			id TEXT NOT NULL PRIMARY KEY,
 			active BOOLEAN NOT NULL DEFAULT FALSE,
 			buckets JSONB NOT NULL,
@@ -33,11 +35,11 @@ const (
 			start_time TIMESTAMP WITHOUT TIME ZONE,
 			updated_at TIMESTAMP WITHOUT TIME ZONE
 		)`
-	pgRuleDropTable = `DROP TABLE IF EXISTS rule.rules CASCADE`
+	pgRuleDropTable = `DROP TABLE IF EXISTS %s.rules CASCADE`
 
 	pgRuleInsert = `
 		INSERT INTO
-		rule.rules(
+		%s.rules(
 			id,
 			active,
 			buckets,
@@ -85,7 +87,7 @@ const (
 			start_time,
 			updated_at
 		FROM
-			rule.rules
+			%s.rules
 		WHERE
 			id = :id
 			AND deleted = false
@@ -95,7 +97,7 @@ const (
 			1`
 
 	pgRuleUpdate = `
-		UPDATE rule.rules
+		UPDATE %s.rules
 		SET
 			active = :active,
 			activated_at = :activatedAt,
@@ -131,7 +133,7 @@ const (
 			start_time,
 			updated_at
 		FROM
-			rule.rules
+			%s.rules
 		WHERE
 			deleted = false`
 
@@ -152,7 +154,7 @@ const (
 			start_time,
 			updated_at
 		FROM
-			rule.rules
+			%s.rules
 		WHERE
 			active = true
 			AND config_id = :configId
@@ -167,18 +169,36 @@ const (
 			)`
 )
 
-type pgRepo struct {
-	db *sqlx.DB
+// PGRepoOption sets an optional parameter on the repo.
+type PGRepoOption func(*PGRepo)
+
+// PGRepoSchema sets the namespacing of the Postgres tables to a non-default
+// schema.
+func PGRepoSchema(schema string) PGRepoOption {
+	return func(r *PGRepo) { r.schema = schema }
+}
+
+// PGRepo is a Postgres backed Repo implementation.
+type PGRepo struct {
+	db     *sqlx.DB
+	schema string
 }
 
 // NewPostgresRepo returns a Postgres backed Repo implementation.
-func NewPostgresRepo(db *sqlx.DB) Repo {
-	return &pgRepo{
-		db: db,
+func NewPostgresRepo(db *sqlx.DB, options ...PGRepoOption) Repo {
+	r := &PGRepo{
+		db:     db,
+		schema: pgDefaultSchmea,
 	}
+
+	for _, option := range options {
+		option(r)
+	}
+
+	return r
 }
 
-func (r *pgRepo) Create(input Rule) (Rule, error) {
+func (r *PGRepo) Create(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
 		return Rule{}, errors.Wrap(err, "marshal buckets")
@@ -216,13 +236,13 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 		args["startTime"] = nil
 	}
 
-	_, err = r.db.NamedExec(pgRuleInsert, args)
+	_, err = r.db.NamedExec(r.prefixSchema(pgRuleInsert), args)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrDuplicateKey:
 			return Rule{}, errors.Wrap(errors.ErrExists, "rule")
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Rule{}, err
 			}
 
@@ -235,10 +255,13 @@ func (r *pgRepo) Create(input Rule) (Rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) GetByID(id string) (Rule, error) {
-	query, args, err := r.db.BindNamed(pgRuleGetByID, map[string]interface{}{
-		"id": id,
-	})
+func (r *PGRepo) GetByID(id string) (Rule, error) {
+	query, args, err := r.db.BindNamed(
+		r.prefixSchema(pgRuleGetByID),
+		map[string]interface{}{
+			"id": id,
+		},
+	)
 	if err != nil {
 		return Rule{}, fmt.Errorf("named query: %s", err)
 	}
@@ -265,7 +288,7 @@ func (r *pgRepo) GetByID(id string) (Rule, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Rule{}, err
 			}
 
@@ -330,7 +353,7 @@ func (r *pgRepo) GetByID(id string) (Rule, error) {
 	}, nil
 }
 
-func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
+func (r *PGRepo) UpdateWith(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
 		return Rule{}, errors.Wrap(err, "marshal buckets")
@@ -341,27 +364,30 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 		return Rule{}, errors.Wrap(err, "marshal criteria")
 	}
 
-	_, err = r.db.NamedExec(pgRuleUpdate, map[string]interface{}{
-		"id":          input.ID,
-		"active":      input.active,
-		"activatedAt": input.activatedAt,
-		"configId":    input.configID,
-		"buckets":     rawBuckets,
-		"createdAt":   input.createdAt,
-		"criteria":    rawCriteria,
-		"description": input.description,
-		"deleted":     input.deleted,
-		"endTime":     input.endTime,
-		"kind":        input.kind,
-		"name":        input.name,
-		"rollout":     input.rollout,
-		"startTime":   input.startTime,
-		"updatedAt":   time.Now().UTC(),
-	})
+	_, err = r.db.NamedExec(
+		r.prefixSchema(pgRuleUpdate),
+		map[string]interface{}{
+			"id":          input.ID,
+			"active":      input.active,
+			"activatedAt": input.activatedAt,
+			"configId":    input.configID,
+			"buckets":     rawBuckets,
+			"createdAt":   input.createdAt,
+			"criteria":    rawCriteria,
+			"description": input.description,
+			"deleted":     input.deleted,
+			"endTime":     input.endTime,
+			"kind":        input.kind,
+			"name":        input.name,
+			"rollout":     input.rollout,
+			"startTime":   input.startTime,
+			"updatedAt":   time.Now().UTC(),
+		},
+	)
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return Rule{}, err
 			}
 
@@ -377,12 +403,12 @@ func (r *pgRepo) UpdateWith(input Rule) (Rule, error) {
 	return input, nil
 }
 
-func (r *pgRepo) ListAll() ([]Rule, error) {
-	rows, err := r.db.Queryx(pgRuleListAll)
+func (r *PGRepo) ListAll() ([]Rule, error) {
+	rows, err := r.db.Queryx(r.prefixSchema(pgRuleListAll))
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return []Rule{}, err
 			}
 
@@ -398,11 +424,14 @@ func (r *pgRepo) ListAll() ([]Rule, error) {
 	return buildList(rows)
 }
 
-func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
-	query, args, err := r.db.BindNamed(pgRuleListActive, map[string]interface{}{
-		"configId": configID,
-		"now":      now,
-	})
+func (r *PGRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
+	query, args, err := r.db.BindNamed(
+		r.prefixSchema(pgRuleListActive),
+		map[string]interface{}{
+			"configId": configID,
+			"now":      now,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("named query: %s", err)
 	}
@@ -411,7 +440,7 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
+			if err := r.Setup(); err != nil {
 				return []Rule{}, err
 			}
 
@@ -425,6 +454,37 @@ func (r *pgRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	}
 
 	return buildList(rows)
+}
+
+func (r *PGRepo) Setup() error {
+	for _, q := range []string{
+		r.prefixSchema(pgRuleCreateSchema),
+		r.prefixSchema(pgRuleCreateTable),
+	} {
+		_, err := r.db.Exec(q)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *PGRepo) Teardown() error {
+	for _, q := range []string{
+		r.prefixSchema(pgRuleDropTable),
+	} {
+		_, err := r.db.Exec(q)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *PGRepo) prefixSchema(query string) string {
+	return fmt.Sprintf(query, r.schema)
 }
 
 func buildList(rows *sqlx.Rows) ([]Rule, error) {
@@ -506,31 +566,4 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 
 	return rules, nil
 
-}
-
-func (r *pgRepo) setup() error {
-	for _, q := range []string{
-		pgRuleCreateSchema,
-		pgRuleCreateTable,
-	} {
-		_, err := r.db.Exec(q)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *pgRepo) teardown() error {
-	for _, q := range []string{
-		pgRuleDropTable,
-	} {
-		_, err := r.db.Exec(q)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

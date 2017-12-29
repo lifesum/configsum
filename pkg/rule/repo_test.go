@@ -22,6 +22,8 @@ func randIntGenerateTest() int {
 }
 
 func TestRuleMatch(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
@@ -134,6 +136,8 @@ func TestRuleMatch(t *testing.T) {
 }
 
 func TestRuleNoMatch(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
@@ -205,6 +209,8 @@ func TestRuleNoMatch(t *testing.T) {
 }
 
 func TestRuleDecisions(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
@@ -258,6 +264,8 @@ func TestRuleDecisions(t *testing.T) {
 }
 
 func TestRuleNoDecisions(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
@@ -304,6 +312,8 @@ func TestRuleNoDecisions(t *testing.T) {
 }
 
 func TestRuleRollout(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{
@@ -360,6 +370,8 @@ func TestRuleRollout(t *testing.T) {
 }
 
 func TestRuleRolloutOutsideBucket(t *testing.T) {
+	t.Parallel()
+
 	var (
 		userID = generate.RandomString(24)
 		ctx    = Context{

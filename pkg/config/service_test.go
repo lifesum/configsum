@@ -16,6 +16,8 @@ func randIntGenerateTest() int {
 }
 
 func TestBaseServiceUpdate(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID   = generate.RandomString(12)
 		baseID     = generate.RandomString(16)
@@ -43,6 +45,8 @@ func TestBaseServiceUpdate(t *testing.T) {
 }
 
 func TestUserServiceRender(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
@@ -143,32 +147,28 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
 		baseName   = generate.RandomString(24)
-		featureKey = generate.RandomString(24)
 		baseParams = rule.Parameters{
-			featureKey: false,
+			"feature_one": false,
+			"feature_two": false,
 		}
-		baseRepo  = preparePGBaseRepo(t)
-		userID    = generate.RandomString(24)
-		userRepo  = preparePGUserRepo(t)
-		rpOne     = uint8(73) // rule not in rollout
-		rpTwo     = uint8(49) // rule in rollout
-		ruleOneID = generate.RandomString(24)
-		ruleTwoID = generate.RandomString(24)
-		ruleRepo  = prepareRuleRepo(t)
-		svc       = NewUserService(baseRepo, userRepo, ruleRepo)
-		matchIDs  = rule.MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-			userID,
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
+		baseRepo     = preparePGBaseRepo(t)
+		userID       = generate.RandomString(24)
+		userRepo     = preparePGUserRepo(t)
+		rpOne        = uint8(73) // rule not in rollout
+		rpTwo        = uint8(49) // rule in rollout
+		ruleOneID    = generate.RandomString(24)
+		ruleTwoID    = generate.RandomString(24)
+		ruleRepo     = prepareRuleRepo(t)
+		svc          = NewUserService(baseRepo, userRepo, ruleRepo)
 		ruleOneParam = rule.Parameters{
-			featureKey: true,
+			"feature_one": true,
 		}
 		ruleTwoParam = rule.Parameters{
-			featureKey: false,
+			"feature_two": true,
+		}
+		expected = rule.Parameters{
+			"feature_one": false,
+			"feature_two": true,
 		}
 	)
 
@@ -184,11 +184,7 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
-			},
-		},
+		nil,
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -210,11 +206,7 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
-			},
-		},
+		nil,
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -239,6 +231,10 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	if have, want := uc1.rendered, baseParams; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
 	_, err = ruleRepo.Create(ruleTwo)
 	if err != nil {
 		t.Fatal(err)
@@ -249,20 +245,18 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if have, want := uc2.ruleDecisions[ruleOneID], uc1.ruleDecisions[ruleOneID]; !reflect.DeepEqual(have, want) {
+	if have, want := uc2.ruleDecisions[ruleTwoID], uc1.ruleDecisions[ruleTwoID]; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := uc1.rendered, ruleOneParam; !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
-	}
-
-	if have, want := uc2.rendered, ruleTwoParam; reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
+	if have, want := uc2.rendered, expected; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
 	}
 }
 
 func TestUserServiceRenderFailingRule(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID   = generate.RandomString(24)
 		baseID     = generate.RandomString(24)
@@ -327,6 +321,8 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 }
 
 func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
+	t.Parallel()
+
 	var (
 		clientID = generate.RandomString(24)
 		baseName = generate.RandomString(24)
@@ -344,6 +340,8 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 }
 
 func TestValidateParamDelta(t *testing.T) {
+	t.Parallel()
+
 	var (
 		key   = generate.RandomString(6)
 		cases = []struct {
@@ -380,7 +378,7 @@ func prepareRuleRepo(t *testing.T) rule.Repo {
 		t.Fatal(err)
 	}
 
-	r := rule.NewPostgresRepo(db)
+	r := rule.NewPostgresRepo(db, rule.PGRepoSchema(t.Name()))
 
 	return r
 }
