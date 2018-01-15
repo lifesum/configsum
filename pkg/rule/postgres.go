@@ -198,6 +198,7 @@ func NewPostgresRepo(db *sqlx.DB, options ...PGRepoOption) Repo {
 	return r
 }
 
+// Create stores a new rule with the given input.
 func (r *PGRepo) Create(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
@@ -242,8 +243,8 @@ func (r *PGRepo) Create(input Rule) (Rule, error) {
 		case pg.ErrDuplicateKey:
 			return Rule{}, errors.Wrap(errors.ErrExists, "rule")
 		case pg.ErrRelationNotFound:
-			if err := r.Setup(); err != nil {
-				return Rule{}, err
+			if serr := r.Setup(); serr != nil {
+				return Rule{}, serr
 			}
 
 			return r.Create(input)
@@ -255,6 +256,7 @@ func (r *PGRepo) Create(input Rule) (Rule, error) {
 	return input, nil
 }
 
+// GetByID returns the rule for the given id.
 func (r *PGRepo) GetByID(id string) (Rule, error) {
 	query, args, err := r.db.BindNamed(
 		r.prefixSchema(pgRuleGetByID),
@@ -353,6 +355,8 @@ func (r *PGRepo) GetByID(id string) (Rule, error) {
 	}, nil
 }
 
+// UpdateWith takes the input and overrides the rule stored for the id of the
+// input.
 func (r *PGRepo) UpdateWith(input Rule) (Rule, error) {
 	rawBuckets, err := json.Marshal(input.buckets)
 	if err != nil {
@@ -387,8 +391,8 @@ func (r *PGRepo) UpdateWith(input Rule) (Rule, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.Setup(); err != nil {
-				return Rule{}, err
+			if serr := r.Setup(); serr != nil {
+				return Rule{}, serr
 			}
 
 			return r.UpdateWith(input)
@@ -403,6 +407,7 @@ func (r *PGRepo) UpdateWith(input Rule) (Rule, error) {
 	return input, nil
 }
 
+// ListAll returns all rules.
 func (r *PGRepo) ListAll() ([]Rule, error) {
 	rows, err := r.db.Queryx(r.prefixSchema(pgRuleListAll))
 	if err != nil {
@@ -424,6 +429,7 @@ func (r *PGRepo) ListAll() ([]Rule, error) {
 	return buildList(rows)
 }
 
+// ListActive returns all active rules.
 func (r *PGRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	query, args, err := r.db.BindNamed(
 		r.prefixSchema(pgRuleListActive),
@@ -456,6 +462,7 @@ func (r *PGRepo) ListActive(configID string, now time.Time) ([]Rule, error) {
 	return buildList(rows)
 }
 
+// Setup prepares the database by setting up schemas and tables.
 func (r *PGRepo) Setup() error {
 	for _, q := range []string{
 		r.prefixSchema(pgRuleCreateSchema),
@@ -470,6 +477,7 @@ func (r *PGRepo) Setup() error {
 	return nil
 }
 
+// Teardown cascadingly removes all database dependencies.
 func (r *PGRepo) Teardown() error {
 	for _, q := range []string{
 		r.prefixSchema(pgRuleDropTable),
@@ -488,7 +496,9 @@ func (r *PGRepo) prefixSchema(query string) string {
 }
 
 func buildList(rows *sqlx.Rows) ([]Rule, error) {
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	rules := []Rule{}
 

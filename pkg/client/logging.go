@@ -33,6 +33,7 @@ func NewRepoLogMiddleware(logger log.Logger, store string) RepoMiddleware {
 				logger,
 				logFieldPkg, "client",
 				logFieldRepo, labelRepo,
+				logFieldStore, store,
 			),
 			next: next,
 		}

@@ -18,6 +18,7 @@ const (
 
 type muxVar string
 
+// MakeHandler sets up an http.Handler with all public API endpoints mounted.
 func MakeHandler(svc Service, opts ...kithttp.ServerOption) http.Handler {
 	r := mux.NewRouter()
 	r.StrictSlash(true)

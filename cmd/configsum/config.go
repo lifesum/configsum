@@ -51,7 +51,7 @@ func runConfig(args []string, logger log.Logger) error {
 		registerMetrics(mux)
 		registerProfile(mux)
 
-		logger.Log(
+		_ = logger.Log(
 			logDuration, time.Since(begin).Nanoseconds(),
 			logLifecycle, lifecycleStart,
 			logListen, addr,

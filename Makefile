@@ -8,7 +8,6 @@ help:
 	@echo "make check-dependencies   Validates that vendored dependencies are satisfied"
 	@echo "---"
 	@echo "make test                 Run all tests"
-	@echo "make test-integration     Run all integration tests"
 	@echo "---"
 	@echo "make ui-bundle            Bundle static assets into Go source code (requires esc)"
 	@echo "make ui-compile           Compiles Elm code to Javascript (requires elm-make)"
@@ -32,10 +31,8 @@ check: check-dependencies
 check-dependencies: $(GOBIN)/dep
 	$(GOBIN)/dep status
 
-test: test-integration
-
-test-integration:
-	go test -tags integration ./...
+test:
+	go test ./...
 
 ui-bundle:
 	cd ui && make bundle

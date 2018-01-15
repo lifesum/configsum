@@ -7,16 +7,8 @@ import (
 )
 
 const (
-	comparatorEQ comparator = iota
-	comparatorNQ
-	comparatorGT
-	comparatorLT
-	comparatorIN
+	comparatorGT comparator = iota
 )
-
-type matcher interface {
-	match(input interface{}) (bool, error)
-}
 
 type comparator int8
 
@@ -81,10 +73,6 @@ func (m MatcherString) match(input interface{}) (bool, error) {
 	}
 
 	return false, nil
-}
-
-type matcherListInt struct {
-	value []int
 }
 
 // MatcherStringList defines methods for matching a rule on string list type
