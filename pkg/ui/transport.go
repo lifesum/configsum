@@ -46,7 +46,7 @@ func MakeHandler(logger log.Logger, base string, local bool) http.Handler {
 
 	r.Methods("GET").PathPrefix("/").Name("root").HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
-			tplRoot.Execute(w, struct {
+			_ = tplRoot.Execute(w, struct {
 				Base string
 			}{
 				Base: base,

@@ -136,7 +136,7 @@ func (s *userService) Render(
 
 	var (
 		decisions = rule.Decisions{}
-		params    = rule.Parameters(bc.Parameters)
+		params    = bc.Parameters
 		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 	)
 

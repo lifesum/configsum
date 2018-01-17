@@ -152,6 +152,7 @@ func NewPostgresBaseRepo(db *sqlx.DB, options ...PGBaseRepoOption) *PGBaseRepo {
 	return r
 }
 
+// Create stores a new base config with the given inputs.
 func (r *PGBaseRepo) Create(
 	id, clientID, name string,
 	parameters rule.Parameters,
@@ -172,8 +173,8 @@ func (r *PGBaseRepo) Create(
 		case pg.ErrDuplicateKey:
 			return BaseConfig{}, errors.Wrap(errors.ErrExists, "base config")
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
-				return BaseConfig{}, err
+			if serr := r.setup(); serr != nil {
+				return BaseConfig{}, serr
 			}
 
 			return r.Create(id, clientID, name, parameters)
@@ -191,6 +192,7 @@ func (r *PGBaseRepo) Create(
 	}, nil
 }
 
+// GetByID returns the base config for the given id.
 func (r *PGBaseRepo) GetByID(id string) (BaseConfig, error) {
 	query, args, err := r.db.BindNamed(
 		r.prefixSchema(pgBaseGetByID),
@@ -246,6 +248,7 @@ func (r *PGBaseRepo) GetByID(id string) (BaseConfig, error) {
 	}, nil
 }
 
+// GetByName retrieves the base config for the given name.
 func (r *PGBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
 	query, args, err := r.db.BindNamed(
 		r.prefixSchema(pgBaseGetByName),
@@ -301,6 +304,7 @@ func (r *PGBaseRepo) GetByName(clientID, name string) (BaseConfig, error) {
 	}, nil
 }
 
+// List returns all base configs.
 func (r *PGBaseRepo) List() (BaseList, error) {
 	rows, err := r.db.NamedQuery(
 		r.prefixSchema(pgBaseList),
@@ -357,6 +361,7 @@ func (r *PGBaseRepo) List() (BaseList, error) {
 	return cs, nil
 }
 
+// Update overrides the base config stored under the id of the input config.
 func (r *PGBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 	rawParameters, err := json.Marshal(c.Parameters)
 	if err != nil {
@@ -378,8 +383,8 @@ func (r *PGBaseRepo) Update(c BaseConfig) (BaseConfig, error) {
 	if err != nil {
 		switch errors.Cause(pg.Wrap(err)) {
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
-				return BaseConfig{}, err
+			if serr := r.setup(); serr != nil {
+				return BaseConfig{}, serr
 			}
 
 			return r.Update(c)
@@ -442,12 +447,13 @@ func (r *PGBaseRepo) prefixSchema(query string) string {
 // PGUserRepoOption sets an optional parameter for the user repo.
 type PGUserRepoOption func(*PGUserRepo)
 
-// PGuserRepoSchema sets the namespacing of the Postgres tables toa non-default
+// PGUserRepoSchema sets the namespacing of the Postgres tables toa non-default
 // schema.
 func PGUserRepoSchema(schema string) PGUserRepoOption {
 	return func(r *PGUserRepo) { r.schema = schema }
 }
 
+// PGUserRepo is a Postgres backed UserRepo implementation.
 type PGUserRepo struct {
 	db     *sqlx.DB
 	schema string
@@ -467,6 +473,8 @@ func NewPostgresUserRepo(db *sqlx.DB, options ...PGUserRepoOption) UserRepo {
 	return r
 }
 
+// Append creates a new user config with the given inputs. We want to enforce
+// append only semantics.
 func (r *PGUserRepo) Append(
 	id, baseID, userID string,
 	decisions rule.Decisions,
@@ -497,8 +505,8 @@ func (r *PGUserRepo) Append(
 		case pg.ErrDuplicateKey:
 			return UserConfig{}, errors.Wrap(errors.ErrExists, "user config")
 		case pg.ErrRelationNotFound:
-			if err := r.setup(); err != nil {
-				return UserConfig{}, err
+			if serr := r.setup(); serr != nil {
+				return UserConfig{}, serr
 			}
 
 			return r.Append(id, baseID, userID, decisions, render)
@@ -516,6 +524,8 @@ func (r *PGUserRepo) Append(
 	}, nil
 }
 
+// GetLatest returns the last rendered user config for the give base and user
+// id.
 func (r *PGUserRepo) GetLatest(baseID, userID string) (UserConfig, error) {
 	query, args, err := r.db.BindNamed(
 		r.prefixSchema(pgUserGetLatest),
