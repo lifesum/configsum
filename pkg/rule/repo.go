@@ -83,7 +83,7 @@ type Rule struct {
 	buckets     []Bucket
 	configID    string
 	createdAt   time.Time
-	criteria    *Criteria
+	criteria    Criteria
 	description string
 	deleted     bool
 	endTime     time.Time
@@ -93,7 +93,6 @@ type Rule struct {
 	rollout     uint8
 	startTime   time.Time
 	updatedAt   time.Time
-	RandFunc    generate.RandPercentageFunc
 }
 
 // New returns a valid rule.
@@ -101,10 +100,9 @@ func New(
 	id, configID, name, description string,
 	kind Kind,
 	active bool,
-	criteria *Criteria,
+	criteria Criteria,
 	buckets []Bucket,
 	rollout *uint8,
-	randFunc generate.RandPercentageFunc,
 ) (Rule, error) {
 	r := Rule{
 		active:      active,
@@ -116,7 +114,6 @@ func New(
 		ID:          id,
 		kind:        kind,
 		name:        name,
-		RandFunc:    randFunc,
 	}
 
 	if rollout != nil {
@@ -176,31 +173,10 @@ func (r Rule) validate() error {
 // Run given an input params and context will try to match based on the rules
 // Criteria and if matched overrides the input params with its own.
 func (r Rule) Run(input Parameters, ctx Context, decisions []int, randInt generate.RandPercentageFunc) (Parameters, []int, error) {
-	if r.criteria != nil && r.criteria.User != nil {
-		if r.criteria.User.Age != nil {
-			return nil, nil, errors.New("matching user age not implemented")
-		}
-
-		if r.criteria.User.ID != nil {
-			ok, err := r.criteria.User.ID.match(ctx.User.ID)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "user id match")
-			}
-
-			if !ok {
-				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "user id")
-			}
-		}
-
-		if r.criteria.User.Subscription != nil {
-			ok, err := r.criteria.User.Subscription.match(ctx.User.Subscription)
-			if err != nil {
-				return nil, nil, errors.Wrap(err, "subscription match")
-			}
-
-			if !ok {
-				return nil, nil, errors.Wrap(errors.ErrRuleNoMatch, "subscription")
-			}
+	for _, c := range r.criteria {
+		err := c.match(ctx)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 

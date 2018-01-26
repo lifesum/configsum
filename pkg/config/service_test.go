@@ -60,8 +60,8 @@ func TestUserServiceRender(t *testing.T) {
 		userRepo = preparePGUserRepo(t)
 		ruleID   = generate.RandomString(24)
 		ruleRepo = prepareRuleRepo(t)
-		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
-		matchIDs = rule.MatcherStringList{
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo, randIntGenerateTest)
+		matchIDs = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -83,9 +83,11 @@ func TestUserServiceRender(t *testing.T) {
 		"",
 		rule.KindOverride,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
 			},
 		},
 		[]rule.Bucket{
@@ -97,7 +99,6 @@ func TestUserServiceRender(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenerateTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -141,7 +142,7 @@ func TestUserServiceRender(t *testing.T) {
 }
 
 func TestUserServiceNotInRollout(t *testing.T) {
-	t.SkipNow()
+	t.Parallel()
 
 	var (
 		clientID   = generate.RandomString(24)
@@ -154,12 +155,12 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		baseRepo     = preparePGBaseRepo(t)
 		userID       = generate.RandomString(24)
 		userRepo     = preparePGUserRepo(t)
-		rpOne        = uint8(73) // rule not in rollout
-		rpTwo        = uint8(49) // rule in rollout
+		rpOne        = uint8(25) // rule not in rollout
+		rpTwo        = uint8(70) // rule in rollout
 		ruleOneID    = generate.RandomString(24)
 		ruleTwoID    = generate.RandomString(24)
 		ruleRepo     = prepareRuleRepo(t)
-		svc          = NewUserService(baseRepo, userRepo, ruleRepo)
+		svc          = NewUserService(baseRepo, userRepo, ruleRepo, randIntGenerateTest)
 		ruleOneParam = rule.Parameters{
 			"feature_one": true,
 		}
@@ -169,6 +170,14 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		expected = rule.Parameters{
 			"feature_one": false,
 			"feature_two": true,
+		}
+		matchIDs = []string{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
 		}
 	)
 
@@ -184,7 +193,13 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		nil,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
+			},
+		},
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -192,7 +207,6 @@ func TestUserServiceNotInRollout(t *testing.T) {
 			},
 		},
 		&rpOne,
-		randIntGenerateTest,
 	)
 
 	if err != nil {
@@ -206,7 +220,13 @@ func TestUserServiceNotInRollout(t *testing.T) {
 		"",
 		rule.KindRollout,
 		true,
-		nil,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
+			},
+		},
 		[]rule.Bucket{
 			{
 				Name:       "defualt",
@@ -214,7 +234,6 @@ func TestUserServiceNotInRollout(t *testing.T) {
 			},
 		},
 		&rpTwo,
-		randIntGenerateTest,
 	)
 
 	if err != nil {
@@ -265,7 +284,7 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 			generate.RandomString(24): false,
 		}
 		baseRepo = preparePGBaseRepo(t)
-		matchIDs = rule.MatcherStringList{
+		matchIDs = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -274,7 +293,7 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 		ruleRepo = prepareRuleRepo(t)
 		userID   = generate.RandomString(24)
 		userRepo = preparePGUserRepo(t)
-		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo, randIntGenerateTest)
 	)
 
 	_, err := baseRepo.Create(baseID, clientID, baseName, baseParams)
@@ -289,9 +308,11 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 		"",
 		rule.KindOverride,
 		true,
-		&rule.Criteria{
-			User: &rule.CriteriaUser{
-				ID: &matchIDs,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
 			},
 		},
 		[]rule.Bucket{
@@ -303,7 +324,6 @@ func TestUserServiceRenderFailingRule(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenerateTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -330,7 +350,7 @@ func TestUserServiceRenderConfigMissingBaseConfig(t *testing.T) {
 		userID   = generate.RandomString(24)
 		userRepo = preparePGUserRepo(t)
 		ruleRepo = prepareRuleRepo(t)
-		svc      = NewUserService(baseRepo, userRepo, ruleRepo)
+		svc      = NewUserService(baseRepo, userRepo, ruleRepo, randIntGenerateTest)
 	)
 
 	_, err := svc.Render(clientID, baseName, userID, userRenderContext{})
