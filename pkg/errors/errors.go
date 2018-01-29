@@ -33,12 +33,13 @@ var (
 
 // Rule errors.
 var (
-	ErrInvalidRule        = errors.New("invalid rule")
-	ErrInvalidTypeToMatch = errors.New("invalid type")
-	ErrNoRuleForID        = errors.New("no rules for this ID")
-	ErrNoRuleWithName     = errors.New("no rule with name")
-	ErrCriterionNotMatch  = errors.New("no criterion match")
-	ErrRuleNotInRollout   = errors.New("not in rollout")
+	ErrInvalidRule               = errors.New("invalid rule")
+	ErrInvalidTypeToMatch        = errors.New("invalid type")
+	ErrNoRuleForID               = errors.New("no rules for this ID")
+	ErrNoRuleWithName            = errors.New("no rule with name")
+	ErrCriterionNotMatch         = errors.New("no criterion match")
+	ErrRuleNotInRollout          = errors.New("not in rollout")
+	ErrParsingInvalidLanguageTag = errors.New("invalid language to parse")
 )
 
 // Cause is a wraper over github.com/pkg/errors.Cause.

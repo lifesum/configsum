@@ -116,47 +116,6 @@ func (r *responseBucket) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-// // ResponseCriterion is used to represent a criterion on the wire.
-// type responseCriterion struct {
-// 	criterion Criterion
-// }
-
-// func (r *responseCriterion) MarshalJSON() ([]byte, error) {
-// 	return json.Marshal(struct {
-// 		Comparator Comparator   `json:"comparator"`
-// 		Key        CriterionKey `json:"key"`
-// 		Value      interface{}  `json:"value"`
-// 		Path       string       `json:"path"`
-// 	}{
-// 		Comparator: r.criterion.Comparator,
-// 		Key:        r.criterion.Key,
-// 		Value:      r.criterion.Value,
-// 		Path:       r.criterion.Path,
-// 	})
-// }
-
-// func (r *responseCriterion) UnmarsealJSON(raw []byte) error {
-// 	v := struct {
-// 		Comparator Comparator   `json:"comparator"`
-// 		Key        CriterionKey `json:"key"`
-// 		Value      interface{}  `json:"value"`
-// 		Path       string       `json:"path"`
-// 	}{}
-
-// 	if err := json.Unmarshal(raw, &v); err != nil {
-// 		return err
-// 	}
-
-// 	r.criterion = Criterion{
-// 		Comparator: v.Comparator,
-// 		Key:        v.Key,
-// 		Value:      v.Value,
-// 		Path:       v.Path,
-// 	}
-
-// 	return nil
-// }
-
 // ResponseParameter used to represent a parameter on the wire.
 type ResponseParameter struct {
 	Name  string      `json:"name"`

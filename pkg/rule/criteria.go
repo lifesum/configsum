@@ -159,8 +159,7 @@ func (c *Criterion) UnmarshalJSON(raw []byte) error {
 
 		t, err := language.Parse(s)
 		if err != nil {
-			// TODO(xla): Wrap in proper marshal error.
-			return err
+			return errors.Wrapf(errors.ErrParsingInvalidLanguageTag, "%s: language tag invalid", s)
 		}
 
 		c.Value = t
