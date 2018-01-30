@@ -25,8 +25,13 @@ func TestRuleMatch(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		gb        = language.MustParseRegion("GB")
+		en        = language.MustParseBase("en")
+		rp        = uint8(77) // rule in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age:          uint8(rand.Intn(99)),
 				ID:           userID,
@@ -36,12 +41,7 @@ func TestRuleMatch(t *testing.T) {
 				Locale: language.Make("en_GB"),
 			},
 		}
-		subs = MatcherInt{
-			Comparator: comparatorGT,
-			Value:      1,
-		}
-		locale = MatcherString("en_GB")
-		ids    = MatcherStringList{
+		ids = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			userID,
@@ -53,56 +53,52 @@ func TestRuleMatch(t *testing.T) {
 			"feature_x": false,
 			"feature_y": false,
 		}
-		rollout         = KindRollout
-		ruleBoolMatcher = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					Subscription: &subs,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:    rollout,
-			rollout: uint8(randIntGenerateTest()),
-		}
-		ruleStringListMatcher = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:    rollout,
-			rollout: uint8(randIntGenerateTest()),
-		}
-		ruleStringMatcher = Rule{
-			criteria: &Criteria{
-				Locale: &locale,
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:    rollout,
-			rollout: uint8(randIntGenerateTest()),
-		}
 	)
 
-	have, _, err := ruleBoolMatcher.Run(input, ctx, nil, randIntGenerateTest)
+	enGB, err := language.Compose(en, gb)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rule, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorGT,
+				Key:        UserSubscription,
+				Value:      1,
+			},
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+			Criterion{
+				Comparator: ComparatorEQ,
+				Key:        DeviceLocationLocale,
+				Value:      enGB,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	have, _, err := rule.Run(input, ctx, nil, randIntGenerateTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,95 +111,71 @@ func TestRuleMatch(t *testing.T) {
 	if !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
-
-	have, _, err = ruleStringListMatcher.Run(input, ctx, nil, randIntGenerateTest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
-	}
-
-	have, _, err = ruleStringMatcher.Run(input, ctx, nil, randIntGenerateTest)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
-	}
 }
 
 func TestRuleNoMatch(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		rp        = uint8(63) // rule in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age:          uint8(rand.Intn(99)),
 				ID:           userID,
 				Subscription: 0,
 			},
 		}
-		subs = MatcherInt{
-			Comparator: comparatorGT,
-			Value:      0,
-		}
-		ids = MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
 		input = Parameters{
 			"feature_x": false,
 			"feature_y": false,
 		}
-		rollout         = KindRollout
-		ruleBoolMatcher = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					Subscription: &subs,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:    rollout,
-			rollout: uint8(randIntGenerateTest()),
-		}
-		ruleStringListMatcher = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:    rollout,
-			rollout: uint8(randIntGenerateTest()),
+		ids = []string{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
 		}
 	)
 
-	_, _, err := ruleBoolMatcher.Run(input, ctx, nil, randIntGenerateTest)
-	if have, want := errors.Cause(err), errors.ErrRuleNoMatch; have != want {
-		t.Errorf("have %v, want %v", have, want)
+	rule, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+			Criterion{
+				Comparator: ComparatorGT,
+				Key:        UserSubscription,
+				Value:      0,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	_, _, err = ruleStringListMatcher.Run(input, ctx, nil, randIntGenerateTest)
-	if have, want := errors.Cause(err), errors.ErrRuleNoMatch; have != want {
+	_, _, err = rule.Run(input, ctx, nil, randIntGenerateTest)
+	if have, want := errors.Cause(err), errors.ErrCriterionNotMatch; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
 }
@@ -212,14 +184,21 @@ func TestRuleDecisions(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		rp        = uint8(69) // rule in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age: uint8(rand.Intn(99)),
 				ID:  userID,
 			},
 		}
-		ids = MatcherStringList{
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		ids = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -227,31 +206,37 @@ func TestRuleDecisions(t *testing.T) {
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		input = Parameters{
-			"feature_x": false,
-			"feature_y": false,
-		}
-		rolloutKind = KindRollout
-		r           = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:     rolloutKind,
-			rollout:  uint8(randIntGenerateTest()),
-			RandFunc: randIntGenerateTest,
-		}
 	)
 
-	_, d, err := r.Run(input, ctx, nil, r.RandFunc)
+	r, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, d, err := r.Run(input, ctx, nil, randIntGenerateTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -267,14 +252,17 @@ func TestRuleNoDecisions(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		rp        = uint8(41) // rule not in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age: uint8(rand.Intn(99)),
 				ID:  userID,
 			},
 		}
-		ids = MatcherStringList{
+		ids = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -286,26 +274,37 @@ func TestRuleNoDecisions(t *testing.T) {
 			"feature_x": false,
 			"feature_y": false,
 		}
-		rolloutKind = KindRollout
-		r           = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:     rolloutKind,
-			RandFunc: randIntGenerateTest,
-		}
 	)
 
-	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	r, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err = r.Run(input, ctx, nil, randIntGenerateTest)
 	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -315,14 +314,21 @@ func TestRuleRollout(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		rp        = uint8(83) // rule in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age: uint8(rand.Intn(99)),
 				ID:  userID,
 			},
 		}
-		ids = MatcherStringList{
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		ids = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -330,31 +336,37 @@ func TestRuleRollout(t *testing.T) {
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		input = Parameters{
-			"feature_x": false,
-			"feature_y": false,
-		}
-		rolloutKind = KindRollout
-		r           = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:     rolloutKind,
-			rollout:  uint8(randIntGenerateTest()),
-			RandFunc: randIntGenerateTest,
-		}
 	)
 
-	have, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	r, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	have, _, err := r.Run(input, ctx, nil, randIntGenerateTest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -373,14 +385,21 @@ func TestRuleRolloutOutsideBucket(t *testing.T) {
 	t.Parallel()
 
 	var (
-		userID = generate.RandomString(24)
-		ctx    = Context{
+		userID    = generate.RandomString(24)
+		ruleID, _ = ulid.New(ulid.Timestamp(time.Now()), seed)
+		baseID    = generate.RandomString(16)
+		rp        = uint8(37) // rule not in rollout
+		ctx       = Context{
 			User: ContextUser{
 				Age: uint8(rand.Intn(99)),
 				ID:  userID,
 			},
 		}
-		ids = MatcherStringList{
+		input = Parameters{
+			"feature_x": false,
+			"feature_y": false,
+		}
+		ids = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -388,31 +407,37 @@ func TestRuleRolloutOutsideBucket(t *testing.T) {
 			generate.RandomString(24),
 			generate.RandomString(24),
 		}
-		input = Parameters{
-			"feature_x": false,
-			"feature_y": false,
-		}
-		rolloutKind = KindRollout
-		r           = Rule{
-			criteria: &Criteria{
-				User: &CriteriaUser{
-					ID: &ids,
-				},
-			},
-			buckets: []Bucket{
-				Bucket{
-					Parameters: Parameters{
-						"feature_x": true,
-					},
-				},
-			},
-			kind:     rolloutKind,
-			rollout:  37,
-			RandFunc: randIntGenerateTest,
-		}
 	)
 
-	_, _, err := r.Run(input, ctx, nil, r.RandFunc)
+	r, err := New(
+		ruleID.String(),
+		baseID,
+		generate.RandomString(12),
+		generate.RandomString(12),
+		KindRollout,
+		true,
+		Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+		},
+		[]Bucket{
+			Bucket{
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+			},
+		},
+		&rp,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err = r.Run(input, ctx, nil, randIntGenerateTest)
 	if have, want := errors.Cause(err), errors.ErrRuleNotInRollout; have != want {
 		t.Errorf("have %v, want %v", have, want)
 	}
@@ -425,7 +450,7 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		name      = generate.RandomString(32)
 		endTime   = time.Now().Add(1000)
 		startTime = time.Now().Add(100)
-		ids       = MatcherStringList{
+		ids       = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -440,8 +465,10 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 			},
 		}
 		criteria = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
 			},
 		}
 	)
@@ -461,7 +488,7 @@ func testRepoGet(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&criteria,
+		criteria,
 	)
 
 	_, err = repo.Create(rule)
@@ -518,7 +545,12 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		nameRuleTwo = generate.RandomString(32)
 		endTime     = time.Now().Add(1000)
 		startTime   = time.Now().Add(100)
-		ids         = MatcherStringList{
+		ids         = []string{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		updateIds = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -532,19 +564,18 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 				Percentage: 100,
 			},
 		}
-		crit = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
+		criteria = Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
 			},
 		}
-		updateIds = MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
-		updateCriteria = Criteria{
-			User: &CriteriaUser{
-				ID: &updateIds,
+		updatedCriteria = Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      updateIds,
 			},
 		}
 		updateBuckets = []Bucket{
@@ -581,7 +612,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleOne)
@@ -604,7 +635,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleTwo)
@@ -622,7 +653,7 @@ func testRepoListDeleted(t *testing.T, p prepareFunc) {
 		time.Now().Add(200),
 		time.Now().Add(2000),
 		updateBuckets,
-		&updateCriteria,
+		updatedCriteria,
 	)
 
 	_, err = repo.UpdateWith(updatedRule)
@@ -669,7 +700,6 @@ func testRepoCreateDuplicate(t *testing.T, p prepareFunc) {
 		nil,
 		buckets,
 		nil,
-		randIntGenerateTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -693,7 +723,12 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		name      = generate.RandomString(32)
 		endTime   = time.Now().Add(1000)
 		startTime = time.Now().Add(100)
-		ids       = MatcherStringList{
+		ids       = []string{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+		updateIds = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -707,19 +742,18 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 				Percentage: 100,
 			},
 		}
-		crit = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
+		criteria = Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
 			},
 		}
-		updateIds = MatcherStringList{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
 		updateCriteria = Criteria{
-			User: &CriteriaUser{
-				ID: &updateIds,
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      updateIds,
 			},
 		}
 		updateBuckets = []Bucket{
@@ -756,7 +790,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(rule)
@@ -774,7 +808,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		time.Now().Add(200),
 		time.Now().Add(2000),
 		updateBuckets,
-		&updateCriteria,
+		updateCriteria,
 	)
 
 	updatedRule.activatedAt = time.Now().AddDate(0, -1, 0)
@@ -797,7 +831,7 @@ func testRepoUpdateWith(t *testing.T, p prepareFunc) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
-	if have, want := (*ur.criteria), updateCriteria; !reflect.DeepEqual(have, want) {
+	if have, want := ur.criteria, updateCriteria; !reflect.DeepEqual(have, want) {
 		t.Errorf("\nhave %#v, \nwant %#v", have, want)
 	}
 
@@ -835,7 +869,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		nameRuleTwo = generate.RandomString(32)
 		endTime     = time.Now().Add(1000)
 		startTime   = time.Now().Add(100)
-		ids         = MatcherStringList{
+		ids         = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -849,9 +883,11 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 				Percentage: 100,
 			},
 		}
-		crit = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
+		criteria = Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
 			},
 		}
 	)
@@ -871,7 +907,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleOne)
@@ -894,7 +930,7 @@ func testRepoListAll(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleTwo)
@@ -937,7 +973,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		nameRuleThree = generate.RandomString(32)
 		endTime       = time.Now().AddDate(0, 1, 0)
 		startTime     = time.Now().AddDate(0, -1, 0)
-		ids           = MatcherStringList{
+		ids           = []string{
 			generate.RandomString(24),
 			generate.RandomString(24),
 			generate.RandomString(24),
@@ -951,9 +987,11 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 				Percentage: 100,
 			},
 		}
-		crit = Criteria{
-			User: &CriteriaUser{
-				ID: &ids,
+		criteria = Criteria{
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
 			},
 		}
 	)
@@ -973,7 +1011,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleOne)
@@ -998,7 +1036,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		zeroTime,
 		zeroTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleTwo)
@@ -1021,7 +1059,7 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 		startTime,
 		endTime,
 		buckets,
-		&crit,
+		criteria,
 	)
 
 	_, err = repo.Create(ruleThree)
@@ -1069,7 +1107,6 @@ func testRepoCreateRollout(t *testing.T, p prepareFunc) {
 		nil,
 		buckets,
 		nil,
-		randIntGenerateTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1103,7 +1140,7 @@ func generateRule(
 	kind Kind,
 	startTime, endTime time.Time,
 	buckets []Bucket,
-	criteria *Criteria,
+	criteria Criteria,
 ) Rule {
 	return Rule{
 		active:      active,

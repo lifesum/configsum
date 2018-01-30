@@ -51,7 +51,6 @@ func TestRuleActivate(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +114,6 @@ func TestRuleDeactivate(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -160,7 +158,23 @@ func TestRuleGet(t *testing.T) {
 		req      = httptest.NewRequest("GET", target, nil)
 		rec      = httptest.NewRecorder()
 		r        = MakeHandler(svc)
-		locale   = MatcherString("en_GB")
+		ids      = []string{
+			generate.RandomString(12),
+			generate.RandomString(12),
+			generate.RandomString(12),
+		}
+		criteria = Criteria{
+			Criterion{
+				Comparator: ComparatorGT,
+				Key:        UserSubscription,
+				Value:      1,
+			},
+			Criterion{
+				Comparator: ComparatorIN,
+				Key:        UserID,
+				Value:      ids,
+			},
+		}
 	)
 
 	rule, err := New(
@@ -170,20 +184,7 @@ func TestRuleGet(t *testing.T) {
 		"Overrides funky feature for all staff memebers",
 		KindOverride,
 		true,
-		&Criteria{
-			Locale: &locale,
-			User: &CriteriaUser{
-				ID: &MatcherStringList{
-					generate.RandomString(12),
-					generate.RandomString(12),
-					generate.RandomString(12),
-				},
-				Subscription: &MatcherInt{
-					Comparator: comparatorGT,
-					Value:      1,
-				},
-			},
-		},
+		criteria,
 		[]Bucket{
 			{
 				Name: "default",
@@ -193,7 +194,6 @@ func TestRuleGet(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -226,14 +226,6 @@ func TestRuleGet(t *testing.T) {
 	}
 
 	if have, want := resp.rule.configID, created.configID; have != want {
-		t.Errorf("have %v, want %v", have, want)
-	}
-
-	if have, want := resp.rule.criteria.Locale, created.criteria.Locale; !reflect.DeepEqual(have, want) {
-		t.Errorf("have %v, want %v", have, want)
-	}
-
-	if have, want := resp.rule.criteria.User, created.criteria.User; !reflect.DeepEqual(have, want) {
 		t.Errorf("have %v, want %v", have, want)
 	}
 
@@ -311,7 +303,6 @@ func TestRuleList(t *testing.T) {
 				},
 			},
 			nil,
-			randIntGenTest,
 		)
 		if err != nil {
 			t.Fatal(err)
@@ -371,7 +362,6 @@ func TestRuleUpdateRollout(t *testing.T) {
 			},
 		},
 		nil,
-		randIntGenTest,
 	)
 	if err != nil {
 		t.Fatal(err)

@@ -96,15 +96,22 @@ type UserService interface {
 type userService struct {
 	baseRepo BaseRepo
 	userRepo UserRepo
+	randFn   generate.RandPercentageFunc
 	ruleRepo rule.Repo
 	seed     *rand.Rand
 }
 
 // NewUserService provides user specific configs.
-func NewUserService(baseRepo BaseRepo, userRepo UserRepo, ruleRepo rule.Repo) UserService {
+func NewUserService(
+	baseRepo BaseRepo,
+	userRepo UserRepo,
+	ruleRepo rule.Repo,
+	randFn generate.RandPercentageFunc,
+) UserService {
 	return &userService{
 		baseRepo: baseRepo,
 		userRepo: userRepo,
+		randFn:   randFn,
 		ruleRepo: ruleRepo,
 		seed:     rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
@@ -137,7 +144,6 @@ func (s *userService) Render(
 	var (
 		decisions = rule.Decisions{}
 		params    = bc.Parameters
-		seed      = rand.New(rand.NewSource(time.Now().UnixNano()))
 	)
 
 	for _, r := range rs {
@@ -153,10 +159,10 @@ func (s *userService) Render(
 			},
 		}
 
-		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], generate.RandPercentage(seed))
+		pm, d, err := r.Run(params, ctx, uc.ruleDecisions[r.ID], s.randFn)
 		if err != nil {
 			switch errors.Cause(err) {
-			case errors.ErrRuleNoMatch:
+			case errors.ErrCriterionNotMatch:
 				continue
 			case errors.ErrRuleNotInRollout:
 				decisions[r.ID] = d
@@ -167,14 +173,6 @@ func (s *userService) Render(
 		}
 
 		params = pm
-	}
-
-	// TODO(xla): This is temporary, remove as soon as rules integrate
-	// properly.
-	userRegion, _ := ctx.Device.Location.locale.Region()
-
-	if ctx.User.Subscription == 1 && regionUS.Contains(userRegion) {
-		params["feature_say-cheese_toggled"] = true
 	}
 
 	if reflect.DeepEqual(params, uc.rendered) && reflect.DeepEqual(uc.ruleDecisions, decisions) {

@@ -1,75 +1,66 @@
 package rule
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 
-	"github.com/lifesum/configsum/pkg/generate"
+	"golang.org/x/text/language"
 )
 
-func TestMatcherListString(t *testing.T) {
+func TestCriterionDeviceLocationLocaleMarshal(t *testing.T) {
 	var (
-		input    = generate.RandomString(24)
-		goodVals = []string{
-			input,
-			generate.RandomString(24),
-			generate.RandomString(24),
-		}
-		badVals = []string{
-			generate.RandomString(24),
-			generate.RandomString(24),
-			generate.RandomString(24),
+		tag  = language.MustParse("en-US")
+		want = Criterion{
+			Comparator: ComparatorEQ,
+			Key:        DeviceLocationLocale,
+			Value:      tag,
+			Path:       "",
 		}
 	)
 
-	m := MatcherStringList(goodVals)
-
-	ok, err := m.match(input)
+	raw, err := json.Marshal(&want)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !ok {
-		t.Errorf("expect input to match")
-	}
+	var have Criterion
 
-	m = MatcherStringList(badVals)
-
-	ok, err = m.match(input)
+	err = json.Unmarshal(raw, &have)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if ok {
-		t.Errorf("expect input not to match")
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
 	}
 }
 
-func TestMatcherString(t *testing.T) {
+func TestCriterionUserSubscriptionMarshal(t *testing.T) {
 	var (
-		input   = generate.RandomString(24)
-		goodVal = input
-		badVal  = generate.RandomString(24)
+		want = Criterion{
+			Comparator: ComparatorEQ,
+			Key:        UserSubscription,
+			Value:      0,
+			Path:       "",
+		}
 	)
 
-	m := MatcherString(goodVal)
-
-	ok, err := m.match(input)
+	raw, err := json.Marshal(&want)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !ok {
-		t.Error("expect input to match")
-	}
+	var have Criterion
 
-	m = MatcherString(badVal)
-
-	ok, err = m.match(input)
+	err = json.Unmarshal(raw, &have)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if ok {
-		t.Error("expect input not to match")
+	if !reflect.DeepEqual(have, want) {
+		t.Log(reflect.TypeOf(want.Value))
+		t.Log(reflect.TypeOf(have.Value))
+		t.Errorf("have %v, want %v", have, want)
 	}
 }

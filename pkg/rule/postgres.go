@@ -311,12 +311,12 @@ func (r *PGRepo) GetByID(id string) (Rule, error) {
 
 	// TODO(xla): If the the value in the column is NULL criteria will be non
 	// nil if we don't have this extra check in place.
-	var criteria *Criteria
+	var criteria Criteria
 
 	if len(raw.Criteria) > 0 && string(raw.Criteria) != "null" {
-		criteria = &Criteria{}
+		criteria = Criteria{}
 
-		if err := json.Unmarshal(raw.Criteria, criteria); err != nil {
+		if err := json.Unmarshal(raw.Criteria, &criteria); err != nil {
 			return Rule{}, errors.Wrap(err, "unmarshal criteria")
 		}
 	}
@@ -559,7 +559,7 @@ func buildList(rows *sqlx.Rows) ([]Rule, error) {
 			buckets:     buckets,
 			configID:    raw.ConfigID,
 			createdAt:   raw.CreatedAt,
-			criteria:    &criteria,
+			criteria:    criteria,
 			description: raw.Description,
 			endTime:     endTime,
 			kind:        raw.Kind,

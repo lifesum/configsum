@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/lifesum/configsum/pkg/auth/simple"
 	"github.com/lifesum/configsum/pkg/client"
 	"github.com/lifesum/configsum/pkg/config"
+	"github.com/lifesum/configsum/pkg/generate"
 	"github.com/lifesum/configsum/pkg/instrument"
 	"github.com/lifesum/configsum/pkg/rule"
 	confhttp "github.com/lifesum/configsum/pkg/transport/http"
@@ -110,10 +112,11 @@ func runConfig(args []string, logger log.Logger) error {
 
 	// Setup service.
 	var (
+		seed         = rand.New(rand.NewSource(time.Now().UnixNano()))
 		mux          = http.NewServeMux()
 		prefixConfig = fmt.Sprintf(`/%s/config`, apiVersion)
 		clientSVC    = client.NewService(clientRepo, tokenRepo)
-		svc          = config.NewUserService(baseRepo, userRepo, ruleRepo)
+		svc          = config.NewUserService(baseRepo, userRepo, ruleRepo, generate.RandPercentage(seed))
 		opts         = []kithttp.ServerOption{
 			kithttp.ServerBefore(kithttp.PopulateRequestContext),
 			kithttp.ServerBefore(confhttp.PopulateRequestContext),
