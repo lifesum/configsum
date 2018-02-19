@@ -232,7 +232,10 @@ func matchUserSubscription(comparator Comparator, expected, input int) error {
 	switch comparator {
 	case ComparatorGT:
 		if input <= expected {
-			return errors.Wrap(errors.ErrCriterionNotMatch, "input value smaller or equal than criterion value")
+			return errors.Wrap(
+				errors.ErrCriterionNotMatch,
+				"input value smaller or equal than criterion value",
+			)
 		}
 	default:
 		return errors.Errorf("comparator '%s' not supported", comparator)
