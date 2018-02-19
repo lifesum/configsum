@@ -107,7 +107,7 @@ func TestUserRender(t *testing.T) {
 		clientID   = generate.RandomString(12)
 		userID     = generate.RandomString(12)
 		paramKey   = generate.RandomString(6)
-		payload    = bytes.NewBufferString(`{"app" : {"version" : "8.8.1"}, "device" : {"os" : {"platform" : "iOS", "version" : "11.2"}, "location" : {"locale" : "en_US", "timezoneOffset" : 3600} "user" : {"age" : 33, "subscription" : 0, "registered" : "2018-02-17T15:46:11.277Z"}`)
+		payload    = bytes.NewBufferString(`{"app" : {"version" : "8.8.1"}, "device" : {"os" : {"platform" : "iOS","version" : "11.2"}, "location" : {"locale" : "en_US", "timezoneOffset" : 3600}},"user" : {"age" : 33,"subscription" : 0,"registered" : "2018-02-17T15:46:11.277Z"}}`)
 		target     = fmt.Sprintf("/%s", baseName)
 		parameters = rule.Parameters{
 			paramKey: false,
