@@ -106,10 +106,8 @@ func TestUserRender(t *testing.T) {
 		baseRepo   = preparePGBaseRepo(t)
 		clientID   = generate.RandomString(12)
 		userID     = generate.RandomString(12)
-		us         = language.MustParseRegion("US")
-		en         = language.MustParseBase("en")
 		paramKey   = generate.RandomString(6)
-		payload    = bytes.NewBufferString(`{"app": { "version": "8.6.7" }, "device": {"location": {"locale": "en_US", "timezoneOffset": 3600}, "os": { "platform": "iOS", "version": "8.0"}}, "user": { "subscription": 1 } }`)
+		payload    = bytes.NewBufferString(`{"app" : {"version" : "8.8.1"}, "device" : {"os" : {"platform" : "iOS", "version" : "11.2"}, "location" : {"locale" : "en_US", "timezoneOffset" : 3600} "user" : {"age" : 33, "subscription" : 0, "registered" : "2018-02-17T15:46:11.277Z"}`)
 		target     = fmt.Sprintf("/%s", baseName)
 		parameters = rule.Parameters{
 			paramKey: false,
@@ -129,7 +127,7 @@ func TestUserRender(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	enUS, err := language.Compose(en, us)
+	enUS, err := language.Parse("en-US")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,12 +148,12 @@ func TestUserRender(t *testing.T) {
 			rule.Criterion{
 				Comparator: rule.ComparatorGT,
 				Key:        rule.UserSubscription,
-				Value:      0,
+				Value:      -1,
 			},
 		},
 		[]rule.Bucket{
 			{
-				Name: "someBucketName",
+				Name: "default",
 				Parameters: rule.Parameters{
 					paramKey: true,
 				},
@@ -169,7 +167,6 @@ func TestUserRender(t *testing.T) {
 	}
 
 	_, err = ruleRepo.Create(override)
-
 	if err != nil {
 		t.Fatal(err)
 	}
