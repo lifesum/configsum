@@ -141,6 +141,129 @@ func TestUserServiceRender(t *testing.T) {
 	}
 }
 
+func TestUserServiceNoActiveRules(t *testing.T) {
+	t.Parallel()
+
+	var (
+		clientID   = generate.RandomString(24)
+		baseID     = generate.RandomString(24)
+		baseName   = generate.RandomString(24)
+		baseParams = rule.Parameters{
+			"feature_one": false,
+			"feature_two": false,
+		}
+		baseRepo     = preparePGBaseRepo(t)
+		userID       = generate.RandomString(24)
+		userRepo     = preparePGUserRepo(t)
+		rpTwo        = uint8(0)
+		ruleOneID    = generate.RandomString(24)
+		ruleTwoID    = generate.RandomString(24)
+		ruleRepo     = prepareRuleRepo(t)
+		svc          = NewUserService(baseRepo, userRepo, ruleRepo, randIntGenerateTest)
+		ruleOneParam = rule.Parameters{
+			"feature_one": true,
+		}
+		ruleTwoParam = rule.Parameters{
+			"feature_two": true,
+		}
+		expected = rule.Parameters{
+			"feature_one": false,
+			"feature_two": false,
+		}
+		matchIDs = []string{
+			generate.RandomString(24),
+			generate.RandomString(24),
+			generate.RandomString(24),
+			userID,
+			generate.RandomString(24),
+			generate.RandomString(24),
+		}
+	)
+
+	_, err := baseRepo.Create(baseID, clientID, baseName, baseParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ruleOne, err := rule.New(
+		ruleOneID,
+		baseID,
+		"ruleOneNotActive",
+		"",
+		rule.KindOverride,
+		false,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
+			},
+		},
+		[]rule.Bucket{
+			{
+				Name:       "defualt",
+				Parameters: ruleOneParam,
+			},
+		},
+		nil,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ruleTwo, err := rule.New(
+		ruleTwoID,
+		baseID,
+		"ruleTwoNotActive",
+		"",
+		rule.KindOverride,
+		false,
+		rule.Criteria{
+			rule.Criterion{
+				Comparator: rule.ComparatorIN,
+				Key:        rule.UserID,
+				Value:      matchIDs,
+			},
+		},
+		[]rule.Bucket{
+			{
+				Name:       "defualt",
+				Parameters: ruleTwoParam,
+			},
+		},
+		&rpTwo,
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ruleRepo.Create(ruleOne)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = ruleRepo.Create(ruleTwo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uc1, err := svc.Render(clientID, baseName, userID, userRenderContext{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := uc1.rendered, baseParams; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	if have, want := uc1.rendered, expected; !reflect.DeepEqual(have, want) {
+		t.Errorf("have %#v, want %#v", have, want)
+	}
+
+}
+
 func TestUserServiceNotInRollout(t *testing.T) {
 	t.Parallel()
 
@@ -398,7 +521,11 @@ func prepareRuleRepo(t *testing.T) rule.Repo {
 		t.Fatal(err)
 	}
 
-	r := rule.NewPostgresRepo(db, rule.PGRepoSchema(t.Name()))
+	r := rule.NewPostgresRepo(db, rule.PGRepoSchema(t.Name()+"_rule"))
+
+	if err := r.Teardown(); err != nil {
+		t.Fatal(err)
+	}
 
 	return r
 }
