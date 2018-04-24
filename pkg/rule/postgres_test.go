@@ -73,6 +73,12 @@ func TestPostgresRepoCreateRollout(t *testing.T) {
 	testRepoCreateRollout(t, preparePGRepo)
 }
 
+func TestRepoNoCriteria(t *testing.T) {
+	t.Parallel()
+
+	testRepoNoCriteria(t, preparePGRepo)
+}
+
 func preparePGRepo(t *testing.T) Repo {
 	db, err := sqlx.Connect("postgres", pgURI)
 	if err != nil {

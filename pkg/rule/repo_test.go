@@ -1077,6 +1077,64 @@ func testRepoListActive(t *testing.T, p prepareFunc) {
 	}
 }
 
+func testRepoNoCriteria(t *testing.T, p prepareFunc) {
+	var (
+		repo      = p(t)
+		configID  = generate.RandomString(24)
+		nameRule  = generate.RandomString(32)
+		endTime   = time.Now().AddDate(0, 1, 0)
+		startTime = time.Now().AddDate(0, -1, 0)
+		buckets   = []Bucket{
+			Bucket{
+				Name: generate.RandomString(24),
+				Parameters: Parameters{
+					"feature_x": true,
+				},
+				Percentage: 100,
+			},
+		}
+		criteria = Criteria{}
+	)
+
+	id, err := ulid.New(ulid.Timestamp(time.Now()), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := generateRule(
+		true,
+		id.String(),
+		configID,
+		nameRule,
+		false,
+		KindOverride,
+		startTime,
+		endTime,
+		buckets,
+		criteria,
+	)
+
+	_, err = repo.Create(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rl, err := repo.ListActive(configID, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if have, want := len(rl), 1; have != want {
+		t.Errorf("have %v, want %v", have, want)
+	}
+
+	for _, rule := range rl {
+		if have, want := rule.ID, r.ID; have != want {
+			t.Errorf("have %v, want %v", have, want)
+		}
+	}
+}
+
 func testRepoCreateRollout(t *testing.T, p prepareFunc) {
 	var (
 		repo     = p(t)
