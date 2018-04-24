@@ -62,6 +62,11 @@ const (
 	UserSubscription
 )
 
+// Date comparison key
+const (
+	ValidDate CriterionKey = iota + 401
+)
+
 // CriterionKey is the set of possible input to match on.
 type CriterionKey int
 
@@ -113,6 +118,14 @@ func (c Criterion) MarshalJSON() ([]byte, error) {
 		t, ok := c.Value.([]string)
 		if !ok {
 			return nil, errors.Wrapf(errors.ErrInvalidTypeToMatch, "%s: value not a string slice", c.Key)
+		}
+
+		value = t
+
+	case ValidDate:
+		t, ok := c.Value.(int)
+		if !ok {
+			return nil, errors.Wrapf(errors.ErrInvalidTypeToMatch, "%s: value noat an int", c.Key)
 		}
 
 		value = t
@@ -177,6 +190,14 @@ func (c *Criterion) UnmarshalJSON(raw []byte) error {
 		}
 
 		c.Value = s
+
+	case ValidDate:
+		s, ok := v.Value.(float64)
+		if !ok {
+			return errors.Wrapf(errors.ErrInvalidTypeToMatch, "%s: value not an int", c.Key)
+		}
+
+		c.Value = int(s)
 	default:
 		return errors.Errorf("unmarshaling for '%s' not supported", c.Key)
 	}
